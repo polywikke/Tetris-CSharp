@@ -6,6 +6,9 @@ namespace Tetris.Core;
 /// </summary>
 public interface IRandomSource
 {
+    /// <summary>重置为指定种子。<see cref="IGameEngine.Start"/> 会调用它，保证同一种子开局序列一致。</summary>
+    void Reseed(int seed);
+
     /// <summary>返回 [0, maxExclusive) 的整数；maxExclusive &lt;= 0 时返回 0。</summary>
     int Next(int maxExclusive);
 }
@@ -18,10 +21,9 @@ public sealed class XorShiftRandomSource : IRandomSource
 {
     private uint _state;
 
-    public XorShiftRandomSource(int seed)
-    {
-        _state = seed == 0 ? 2463534242u : unchecked((uint)seed);
-    }
+    public XorShiftRandomSource(int seed) => Reseed(seed);
+
+    public void Reseed(int seed) => _state = seed == 0 ? 2463534242u : unchecked((uint)seed);
 
     public int Next(int maxExclusive)
     {

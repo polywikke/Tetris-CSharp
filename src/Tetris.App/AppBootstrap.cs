@@ -11,9 +11,15 @@ namespace Tetris.App;
 internal static class AppBootstrap
 {
     /// <summary>
-    /// TODO(B)：A 交付 <c>GameEngine</c> 后，把下面一行换成
-    /// <code>new Tetris.Core.Engine.GameEngine(GameConfig.Default, new StandardGameRules(), new XorShiftRandomSource(seed))</code>
-    /// 然后删除对 DemoEngine 的 using。
+    /// 当前使用假引擎，界面可以先跑起来。
+    /// <para>
+    /// 集成时（见 docs/00-项目总览与集成.md）把方法体换成：
+    /// <code>
+    /// var rules = new StandardGameRules();
+    /// return new GameEngine(GameConfig.Default, rules, new XorShiftRandomSource(seed));
+    /// </code>
+    /// 需要 <c>using Tetris.Core.Engine;</c> 与 <c>using Tetris.Core.Rules;</c>。
+    /// </para>
     /// </summary>
     public static IGameEngine CreateEngine(int seed) => new DemoEngine(GameConfig.Default);
 

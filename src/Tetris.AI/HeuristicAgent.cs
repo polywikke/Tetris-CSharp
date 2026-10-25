@@ -5,7 +5,7 @@ namespace Tetris.AI;
 /// <summary>
 /// 启发式自动玩家骨架（C 负责实现）。当前实现只返回 <see cref="GameCommand.None"/>，
 /// 也就是说接进界面后 AI 不会动——这是刻意的占位，方便先联调"人类/AI 切换"。
-/// <para>实现要点见 docs/分工与接口契约.md §5：对每个 (旋转, 落点列) 做 Clone + 落底 + LockActive，
+/// <para>实现要点见 docs/03-C-AI与测试.md §4：对每个 (旋转, 落点列) 做 Clone + 落底 + LockActive，
 /// 再用高度、空洞、凹凸度、消行数打分，取最优解；每块只规划一次，然后逐帧下发移动指令。</para>
 /// </summary>
 public sealed class HeuristicAgent : IPlayerAgent

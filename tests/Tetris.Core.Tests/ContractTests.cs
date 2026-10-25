@@ -104,4 +104,22 @@ public class ContractTests
             Assert.Equal(a.Next(7), b.Next(7));
         }
     }
+
+    [Fact]
+    public void Reseed_ShouldRestartTheSameSequence()
+    {
+        var random = new XorShiftRandomSource(7);
+        var first = new int[10];
+        for (var i = 0; i < first.Length; i++)
+        {
+            first[i] = random.Next(7);
+        }
+
+        random.Reseed(7);
+
+        for (var i = 0; i < first.Length; i++)
+        {
+            Assert.Equal(first[i], random.Next(7));
+        }
+    }
 }
