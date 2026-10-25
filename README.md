@@ -35,7 +35,7 @@ dotnet publish src/Tetris.App -c Release -r win-x64 --self-contained false -o pu
 | 空格 | 硬降 |
 | P / Esc | 暂停 / 继续 |
 | F2 | 重新开始 |
-| F3 | 人机切换（AI 接入后可用） |
+| F3 | AI 观战 / 玩家接管（AI 接入后可用） |
 
 分数以十六进制显示；最高分保存在 `%AppData%\TetrisCourse\highscore.xml`。
 

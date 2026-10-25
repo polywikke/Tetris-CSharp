@@ -1,19 +1,23 @@
 # 03 · C 的任务书：AI、测试与发布
 
 **你的板块：** `src/Tetris.AI`（自动玩家）+ `tests/`（单元测试）+ 发布/文档/视频。
-**你负责的是"可选功能 15 分"和"架构与测试 10 分"里的测试部分，也是唯一能让 A 的代码被证明正确的人。**
+**扩展功能只做这一项（AI），不做第二项**——评分对可选功能是 15 分封顶，做一项"完美实现"就能拿到 12–15，多做的收益接近零。
 
 ---
 
 ## 一、你要交什么
 
-| # | 交付物 | 文件 | 截止 | 验收 |
-|---|---|---|---|---|
-| 1 | 启发式 AI（评估 + 落点搜索 + 指令序列） | `src/Tetris.AI/**` | D6 | 自动玩 3 分钟不崩，每局稳定消行 |
-| 2 | 单元测试 ≥15 个 | `tests/Tetris.Core.Tests/**` | D5 | `dotnet test` 全绿 |
-| 3 | 覆盖率 / AI 平均分数据 | 报告 4.3 | D10 | 有具体数字 |
-| 4 | publish 产物 + README + 演示视频 | `publish/`、`README.md` | D12 | 双击 exe 能跑 |
-| 5 | AI 接进界面（与 B 配合） | 见总览 §5 节点 4 | D8 | F3 切换人机 |
+| 顺序 | 交付物 | 文件 | 验收 |
+|---|---|---|---|
+| ① | 测试骨架 + 假规则 | `tests/Tetris.Core.Tests/**` | 能在 A 交付前先跑起来 |
+| ② | 评估函数 | `src/Tetris.AI/BoardEvaluator.cs`（新建） | 四项特征算对，有单元测试 |
+| ③ | 落点搜索（1-ply） | `src/Tetris.AI/PlacementFinder.cs`（新建） | 48 个候选里选出最优 |
+| ④ | 指令状态机 + 兜底 | `src/Tetris.AI/HeuristicAgent.cs` | 能自动玩完整局，不卡死 |
+| ⑤ | 2-ply 搜索（top-K） | 同上 | 比 1-ply 平均分高，有数据 |
+| ⑥ | 决策数据（可视化接口） | `HeuristicAgent` 实现 `IPlayerAgentDebug` | B 能画热力图 |
+| ⑦ | 测试 ≥20 个 | `tests/**` | `dotnet test` 全绿 |
+| ⑧ | 覆盖率 + AI 平均分 | 报告 4.3 | 有具体数字 |
+| ⑨ | publish + README + 视频 | `publish/`、`README.md` | 双击 exe 能跑 |
 
 ---
 
@@ -56,7 +60,27 @@ public enum GameCommand
 - 不许抛异常；想不出办法就返回 `HardDrop` 或 `None`；
 - 单帧耗时 ≤ 8ms（60 帧只有 16.7ms）。
 
-### 3.2 你调用的：`IGameRules` 与 `GameState`
+### 3.2 你实现的（可选）：`IPlayerAgentDebug`
+
+给界面画"AI 在想什么"。不实现也能拿分，实现了演示效果明显更好。
+
+```csharp
+public interface IPlayerAgentDebug
+{
+    IReadOnlyList<AgentCandidate> Candidates { get; }  // 最近一次决策的全部候选
+    AgentCandidate? Chosen { get; }
+}
+
+public sealed record AgentCandidate(
+    PieceKind Kind, int Rotation, int X, int Y,
+    double Score, int ClearedLines, int Holes, int AggregateHeight, int Bumpiness);
+```
+
+- `X/Y` 是落点方块 4×4 包围盒的左上角，`Y` 是已经落到底的位置；
+- 每次重新规划时整体替换 `Candidates`，`Chosen` 同步更新；
+- 没有新决策时保持上一次的值也没关系，但不能返回 null 集合。
+
+### 3.3 你调用的：`IGameRules` 与 `GameState`
 
 ```csharp
 public interface IGameRules
@@ -89,15 +113,15 @@ public sealed class Tetromino
 
 ---
 
-## 四、任务 1：AI（可选功能 15 分）
+## 四、AI 实现（这是你最重要的活）
 
-### 4.1 整体结构（建议三个文件）
+### 4.1 结构
 
 ```
 src/Tetris.AI/
-├─ HeuristicAgent.cs     实现 IPlayerAgent，维护"当前方块的落点计划"
-├─ BoardEvaluator.cs     给一个棋盘打分
-└─ PlacementFinder.cs    枚举 4 旋转 × 12 列，返回最优落点
+├─ HeuristicAgent.cs     实现 IPlayerAgent + IPlayerAgentDebug，维护当前方块的落点计划
+├─ BoardEvaluator.cs     给一个棋盘打分（四项特征 + 权重）
+└─ PlacementFinder.cs    枚举旋转和落点，返回候选与最优
 ```
 
 ### 4.2 评估函数
@@ -120,7 +144,7 @@ score = 0.76 * clearedLines
       - 0.18 * bumpiness
 ```
 
-### 4.3 落点搜索
+### 4.3 落点搜索（1-ply）
 
 ```
 foreach rotation in 0..3:
@@ -134,12 +158,30 @@ foreach rotation in 0..3:
         sim.Active = p
         cleared = rules.LockActive(sim)
         s = Eval(sim.Board, cleared)
-        记录最优
+        记录候选 (rotation, targetX, p.Y, s, ...)
 ```
 
 > 旋转会改变方块在包围盒里的形状，**先转再算落点列**；`Collides` 判不下的列直接跳过。
 
-### 4.4 指令状态机（每帧只发一个命令）
+### 4.4 2-ply 搜索（比 1-ply 强，成本可控）
+
+1-ply 只看当前块放哪；2-ply 再看"下一块放到这个新棋盘上最好能得多少分"。
+
+不要 48 × 48 全展开，**只对前 K 个候选做第二层**（K = 6）：
+
+```
+first = 1-ply 全部候选，按 Score 降序
+best = null
+foreach c in first.Take(K):
+    second = 在 c 的结果棋盘上，对 NextQueue.Peek(1) 做 1-ply 枚举
+    total = c.Score + 0.4 * best(second)          // 下一块权重 0.3~0.5 之间调
+    if (total > best) ...
+```
+
+复杂度：48 + 6 × 48 ≈ 336 次模拟/块，仍然在 8ms 预算内。
+**报告里写清"K=6 的截断是性能与棋力的折中"，并用数据说明 2-ply 比 1-ply 平均分高多少。**
+
+### 4.5 指令状态机（每帧只发一个命令）
 
 ```
 if (_plan == null || 方块换了) _plan = FindBest(state);
@@ -152,22 +194,39 @@ return HardDrop;
 
 - 旋转 4 帧还没到位 → 放弃旋转，直接降；
 - 同一方块超过 120 帧还没落下 → `HardDrop`；
-- `FindBest` 找不到任何落点（棋盘满了）→ `HardDrop`。
+- `FindBest` 找不到任何落点（棋盘满了）→ `HardDrop`；
+- 连续两帧状态没变化 → 重新规划一次，避免死锁。
 
-### 4.5 性能
+### 4.6 观战 / 接管（需求里写的"人机对战或观战演示"）
 
-- 每块最多 4 × 12 = 48 次推演，每次 `Clone + LockActive` 是 O(12×16)，完全够快；
-- 用 `Stopwatch` 测一次决策耗时，写进报告（要求 ≤ 8ms）。
+单棋盘项目里没法做字面的"人机对战"，按下面解释，并写进报告第二章"需求理解与假设"：
+
+- **观战演示**：AI 全程自动，玩家只看；
+- **人机对战**：AI 与玩家轮流控制同一块棋盘，F3 随时切换；AI 控制期间玩家按键不生效；
+- 切换时**不重置当前方块**，玩家接手即可继续操作。
+
+这是主动的需求解释，比硬凑双棋盘安全，也是评分标准里"对歧义需求说明处理方式"的得分点。
+
+### 4.7 决策数据（给 B 画热力图）
+
+每块规划一次时，把全部候选填进 `Candidates`，把最优填进 `Chosen`。
+界面按 `Score` 归一化成绿→红，`Chosen` 描边。你的活只是"把数据如实暴露出来"，画不画是 B 的事。
+
+### 4.8 性能
+
+- 1-ply：48 次模拟；2-ply：约 336 次；每次模拟是 `Clone + LockActive`，O(12×16)；
+- 用 `Stopwatch` 测一次决策耗时，写进报告（要求 ≤ 8ms，目标 < 2ms）；
+- 不要在 `NextCommand` 里做 IO 或日志。
 
 ---
 
-## 五、任务 2：单元测试（≥15 个，评分点）
+## 五、测试（≥20 个，评分点）
 
 ### 5.1 现状
 
-`tests/Tetris.Core.Tests/ContractTests.cs` 已有 9 个（契约级）。你要再加 12 个以上，凑到 20+。
+`tests/Tetris.Core.Tests/ContractTests.cs` 已有 9 个（契约级）。你要再加 12 个以上。
 
-### 5.2 建议的测试清单
+### 5.2 建议清单
 
 | # | 用例 | 断言 |
 |---|---|---|
@@ -191,6 +250,8 @@ return HardDrop;
 | 18 | AI 冒烟 | 返回合法命令，且原 `state` 未被修改 |
 | 19 | AI 能消行 | 给定一行差一格，AI 在 200 帧内消除 |
 | 20 | 消行后棋盘压缩正确 | 上方行整体下移、无残留 |
+| 21 | 决策耗时 | 单次 `NextCommand` < 8ms |
+| 22 | 候选数据 | `Candidates` 非空且 `Chosen` 在候选里 |
 
 ### 5.3 写法要求
 
@@ -201,7 +262,7 @@ return HardDrop;
 
 ---
 
-## 六、任务 3：发布与演示
+## 六、发布与演示
 
 ### 6.1 publish
 
@@ -209,8 +270,7 @@ return HardDrop;
 dotnet publish src/Tetris.App -c Release -r win-x64 --self-contained false -o publish
 ```
 
-产物体积小（依赖本机 .NET 10 运行时），老师机器装了 .NET 10 就能直接跑。
-如果要"双击即用"，改成 `--self-contained true`（体积约 150MB，二选一，README 里写清）。
+产物体积小（依赖本机 .NET 10 运行时）。要"双击即用"就改成 `--self-contained true`（约 150MB，二选一，README 里写清）。
 
 ### 6.2 README 定稿
 
@@ -221,10 +281,10 @@ dotnet publish src/Tetris.App -c Release -r win-x64 --self-contained false -o pu
 | 时间 | 内容 |
 |---|---|
 | 0:00–0:20 | 开场：项目名、三人分工 |
-| 0:20–1:20 | 玩一局：移动/旋转/消行/升级/暂停 |
-| 1:20–1:50 | **异常演示（必拍）**：删掉存档文件（或写坏）→ 启动 → 优雅降级 → 再破纪录保存 |
-| 1:50–2:20 | 按 F3 切 AI 自动玩 |
-| 2:20–2:40 | 测试跑一遍（`dotnet test` 全绿）+ 收尾 |
+| 0:20–1:10 | 玩一局：移动/旋转/消行/升级/暂停 |
+| 1:10–1:40 | **异常演示（必拍）**：删掉存档文件（或写坏）→ 启动 → 优雅降级 → 再破纪录保存 |
+| 1:40–2:20 | F3 切 AI：热力图 + AI 自己玩 |
+| 2:20–2:40 | `dotnet test` 全绿 + 收尾 |
 
 ---
 
@@ -235,40 +295,34 @@ dotnet publish src/Tetris.App -c Release -r win-x64 --self-contained false -o pu
 | 1 | `dotnet test` | 全绿，用例数 ≥ 20 |
 | 2 | AI 连玩 3 局 | 不崩、不卡、每局都能消行 |
 | 3 | 单次 AI 决策耗时 | ≤ 8ms（有数字） |
-| 4 | AI 10 局平均分 | 有数字（报告 4.3） |
-| 5 | 覆盖率 | `dotnet test --collect:"XPlat Code Coverage"` 有报告 |
-| 6 | publish 产物拷到别的目录 | 能双击运行 |
-| 7 | 文档 | README 与实际一致，没有过时截图 |
+| 4 | 2-ply vs 1-ply | 平均分对比有数字 |
+| 5 | AI 10 局平均分 | 有数字（报告 4.3） |
+| 6 | 覆盖率 | `dotnet test --collect:"XPlat Code Coverage"` 有报告 |
+| 7 | publish 产物拷到别的目录 | 能双击运行 |
+| 8 | 文档 | README 与实际一致，没有过时内容 |
 
 ---
 
 ## 八、报告与答辩
 
-**报告主写：** 3.4 扩展功能设计（评估函数、搜索、指令状态机）、4.3 量化数据（AI 平均分、决策耗时、测试数量与覆盖率）。
+**报告主写：** 3.4 扩展功能设计（评估函数、1-ply/2-ply、指令状态机、观战/接管）、4.3 量化数据（AI 平均分、决策耗时、1-ply vs 2-ply、测试数量与覆盖率）。
 **附录：** 《AI 使用声明》（用没用、用在哪、哪些结果被你改了）。
 
 **答辩准备：**
 
 1. 评估函数的四项分别是什么意思？权重怎么定的？调过没有？
 2. 为什么必须 `Clone` 之后推演？直接改会怎样？
-3. 测试里哪个用例最难写？为什么？
+3. 2-ply 为什么只展开前 6 个？K 变大变小时效果怎么变？
 4. AI 卡住不动时你怎么兜底的？
+5. 测试里哪个用例最难写？为什么？
 
 **现场小改动演练：** 把评估函数的一行权重改掉（比如 `holes` 系数从 -0.36 改成 -0.8），重新跑，说明"AI 变保守了"。
 
 ---
 
-## 九、提交节奏
+## 九、提交要求
 
-| 时间 | 提交内容 |
-|---|---|
-| D1 | 测试骨架 + `FakeGameRules` + 评估函数 |
-| D2 | 落点搜索 + 指令状态机（用假规则跑通） |
-| D3 | **A 交规则后**：换成真规则，规则类测试转绿 |
-| D5 | 测试补到 20 个（**节点 2 的验收由你出**） |
-| D6 | AI 跑通整局 |
-| D8 | 配合 B 接界面、调权重 |
-| D10 | 覆盖率、AI 数据、README |
-| D12 | publish + 视频 |
-
-提交信息：`feat(ai): 实现启发式落点搜索`、`test(core): 补充消行与踢墙用例`。
+- 每完成 ①~⑨ 里的一个可验证小步，就提交一次，不要攒到最后；
+- 信息格式：`feat(ai): 实现 2-ply 落点搜索`、`test(core): 补充消行与踢墙用例`；
+- 提交前：`dotnet test` 全绿；
+- 老师要求整个仓库 ≥12 次提交、分布在 ≥4 个不同日期，别最后一天一次性合并。
