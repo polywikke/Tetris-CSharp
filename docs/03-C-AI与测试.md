@@ -17,7 +17,7 @@
 | ⑥ | 决策数据（可视化接口） | `HeuristicAgent` 实现 `IPlayerAgentDebug` | B 能画热力图 |
 | ⑦ | 测试 ≥20 个 | `tests/**` | `dotnet test` 全绿 |
 | ⑧ | 覆盖率 + AI 平均分 | 报告 4.3 | 有具体数字 |
-| ⑨ | publish + README + 视频 | `publish/`、`README.md` | 双击 exe 能跑 |
+| ⑨ | README + 演示视频 | `README.md` | 文档与程序一致，视频 2–3 分钟 |
 
 ---
 
@@ -210,7 +210,7 @@ return HardDrop;
 ### 4.7 决策数据（给 B 画热力图）
 
 每块规划一次时，把全部候选填进 `Candidates`，把最优填进 `Chosen`。
-界面按 `Score` 归一化成绿→红，`Chosen` 描边。你的活只是"把数据如实暴露出来"，画不画是 B 的事。
+界面按 `Score` 归一化成绿→红，`Chosen` 描边。**画图是 B 的交付物（见 02 §8.3），你只负责数据正确、不返回 null 集合。**
 
 ### 4.8 性能
 
@@ -262,15 +262,11 @@ return HardDrop;
 
 ---
 
-## 六、发布与演示
+## 六、文档与演示
 
-### 6.1 publish
+### 6.1 发布产物（由 A 提供）
 
-```bash
-dotnet publish src/Tetris.App -c Release -r win-x64 --self-contained false -o publish
-```
-
-产物体积小（依赖本机 .NET 10 运行时）。要"双击即用"就改成 `--self-contained true`（约 150MB，二选一，README 里写清）。
+publish 是 A 的交付物（见 01 §七）。你录视频前找 A 要一份最新的 `publish/` 目录，**不要自己发布**——产物和代码对不上，视频就白录了。
 
 ### 6.2 README 定稿
 
@@ -298,7 +294,7 @@ dotnet publish src/Tetris.App -c Release -r win-x64 --self-contained false -o pu
 | 4 | 2-ply vs 1-ply | 平均分对比有数字 |
 | 5 | AI 10 局平均分 | 有数字（报告 4.3） |
 | 6 | 覆盖率 | `dotnet test --collect:"XPlat Code Coverage"` 有报告 |
-| 7 | publish 产物拷到别的目录 | 能双击运行 |
+| 7 | 用 A 给的 publish 产物 | 双击能运行 |
 | 8 | 文档 | README 与实际一致，没有过时内容 |
 
 
