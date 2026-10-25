@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Tetris.AI</RootNamespace>
+    <AssemblyName>Tetris.AI</AssemblyName>
+    <Description>自动玩家（C 负责）。只依赖 Tetris.Core 的接口。</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tetris.Core\Tetris.Core.csproj" />
+  </ItemGroup>
+
+</Project>

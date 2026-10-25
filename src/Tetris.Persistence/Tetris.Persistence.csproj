@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Tetris.Persistence</RootNamespace>
+    <AssemblyName>Tetris.Persistence</AssemblyName>
+    <Description>高分 XML 持久化（B 负责）。</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tetris.Core\Tetris.Core.csproj" />
+  </ItemGroup>
+
+</Project>

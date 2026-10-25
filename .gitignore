@@ -1,0 +1,24 @@
+## .NET 构建产物
+bin/
+obj/
+publish/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Visual Studio / Rider / VS Code
+.vs/
+.idea/
+.vscode/
+*.swp
+
+## 测试与覆盖率
+TestResults/
+coverage*.xml
+coverage*.json
+*.coverage
+
+## 本机/临时
+.tmp/
+*.log

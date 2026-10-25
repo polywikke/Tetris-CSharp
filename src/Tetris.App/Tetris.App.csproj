@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <RootNamespace>Tetris.App</RootNamespace>
+    <AssemblyName>Tetris.App</AssemblyName>
+    <Description>WinForms 界面（B 负责）：渲染、输入、HUD、暂停/结束覆盖层。</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Tetris.Core\Tetris.Core.csproj" />
+    <ProjectReference Include="..\Tetris.Persistence\Tetris.Persistence.csproj" />
+  </ItemGroup>
+
+</Project>

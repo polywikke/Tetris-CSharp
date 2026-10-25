@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Tetris.Core</RootNamespace>
+    <AssemblyName>Tetris.Core</AssemblyName>
+    <Description>俄罗斯方块核心契约：状态、规则、引擎、存档、AI 接口。不依赖任何界面技术。</Description>
+  </PropertyGroup>
+
+</Project>
