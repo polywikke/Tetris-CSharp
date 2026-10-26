@@ -8,15 +8,33 @@ namespace Tetris.Core.Rules;
 /// C 的 AI 在副本上推演时可以直接复用同一个实例。
 /// </para>
 /// <para>
-/// 交付进度：本次完成 ① 规则三件套（<see cref="Collides"/>、<see cref="DropDistance"/>、
-/// <see cref="TryMove"/>）。② 旋转踢墙与 ③ 锁定消行按任务书顺序后续补在本类中，
-/// 在补齐之前这两个方法会抛 <see cref="NotImplementedException"/>，避免"静默返回错误结果"。
+/// 交付进度：① 规则三件套（<see cref="Collides"/>、<see cref="DropDistance"/>、<see cref="TryMove"/>）
+/// 与 ② 旋转踢墙（<see cref="TryRotate"/>）已完成；③ 锁定消行（<see cref="LockActive"/>）
+/// 按任务书顺序后续补在本类中，在补齐之前该方法会抛 <see cref="NotImplementedException"/>，
+/// 避免"静默返回错误结果"。
 /// </para>
 /// </summary>
 public sealed class StandardGameRules : IGameRules
 {
     /// <summary>包围盒边长，与 <see cref="PieceShape.BoxSize"/> 保持一致，用于下落距离的防御性上界。</summary>
     private const int BoxSize = PieceShape.BoxSize;
+
+    /// <summary>
+    /// JLSTZ 的踢墙偏移，<b>按尝试顺序</b>排列：原地 → 左一 → 右一 → 左二 → 右二 → 上抬一格。
+    /// 简化 SRS：只做一档踢墙，不查完整的 SRS 旋转表（任务书 5.3 的主动取舍）。
+    /// </summary>
+    private static readonly (int Dx, int Dy)[] JlstzKicks =
+    {
+        (0, 0), (-1, 0), (1, 0), (-2, 0), (2, 0), (0, -1),
+    };
+
+    /// <summary>
+    /// I 的踢墙偏移：水平方向先试两格再试一格，顺序与 JLSTZ 不同（同样只做一档）。
+    /// </summary>
+    private static readonly (int Dx, int Dy)[] IKicks =
+    {
+        (0, 0), (-2, 0), (2, 0), (-1, 0), (1, 0), (0, -1),
+    };
 
     /// <summary>
     /// 该姿态是否与墙、地或已固定方块重叠。<b>纯查询</b>，不改变任何状态。
@@ -114,10 +132,45 @@ public sealed class StandardGameRules : IGameRules
         return true;
     }
 
-    /// <summary>TODO(②)：旋转（+1 顺时针 / -1 逆时针）与简化 SRS 踢墙，尚未实现。</summary>
-    /// <exception cref="NotImplementedException">交付 ② 之前调用会抛出，避免静默返回错误结果。</exception>
-    public bool TryRotate(GameState state, int direction) =>
-        throw new NotImplementedException("TODO(②)：旋转与踢墙尚未实现（A 的交付 ②）。");
+    /// <summary>
+    /// 把当前方块旋转 90°（<paramref name="direction"/> = +1 顺时针、-1 逆时针），
+    /// 并按简化 SRS 顺序尝试踢墙偏移；第一个不碰撞的位置生效。
+    /// 所有偏移都失败时返回 <c>false</c>，且<b>状态完全不变</b>。
+    /// </summary>
+    /// <remarks>
+    /// 踢墙表见 <see cref="JlstzKicks"/> / <see cref="IKicks"/>，按方块种类（I 单独一套）选择。
+    /// 这是<b>主动的简化取舍</b>：只做一档踢墙，不实现完整 SRS 的朝向相关偏移表，
+    /// 足够让贴墙、贴底的旋转正常工作，也便于在报告里讲清楚。
+    /// <para>
+    /// 不查表外的情况：<paramref name="direction"/> 可以是任意整数，由
+    /// <see cref="PieceShape.Normalize"/> 归一化到 0..3；<c>direction = 0</c> 时
+    /// 等价于"原地不动"，返回 <c>true</c>。
+    /// </para>
+    /// </remarks>
+    public bool TryRotate(GameState state, int direction)
+    {
+        if (state is null)
+        {
+            return false;
+        }
+
+        var rotated = state.Active.With(rotation: state.Active.Rotation + direction);
+        var kicks = state.Active.Kind == PieceKind.I ? IKicks : JlstzKicks;
+
+        foreach (var kick in kicks)
+        {
+            var candidate = rotated.With(x: rotated.X + kick.Dx, y: rotated.Y + kick.Dy);
+            if (Collides(state, candidate))
+            {
+                continue;
+            }
+
+            state.Active = candidate;
+            return true;
+        }
+
+        return false;
+    }
 
     /// <summary>TODO(③)：锁定当前方块 → 消行 → 计分 → 升级，尚未实现。</summary>
     /// <exception cref="NotImplementedException">交付 ③ 之前调用会抛出，避免静默返回错误结果。</exception>
