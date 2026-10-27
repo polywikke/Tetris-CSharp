@@ -8,9 +8,9 @@ namespace Tetris.Core.Engine;
 /// 界面每帧读 <see cref="State"/>，<b>不要缓存这个引用跨局使用</b>——<see cref="Start"/> 会换一个新对象。
 /// </para>
 /// <para>
-/// 交付进度：开局、7-bag 与预览队列已完成；重力推进（<see cref="Tick"/>）与命令处理
-/// （<see cref="Apply"/>）按任务书顺序后续补在本类中，在补齐之前它们会抛
-/// <see cref="NotImplementedException"/>，避免静默假装成功。
+/// 交付进度：开局、7-bag、预览队列与重力/锁定已完成；命令处理（<see cref="Apply"/>）
+/// 按任务书顺序后续补在本类中，在补齐之前它会抛 <see cref="NotImplementedException"/>，
+/// 避免静默假装成功。
 /// </para>
 /// </summary>
 public sealed class GameEngine : IGameEngine
@@ -24,6 +24,9 @@ public sealed class GameEngine : IGameEngine
     private readonly SevenBag _bag;
 
     private GameState _state;
+
+    /// <summary>重力计时器：每帧累加 1/60 秒，攒到 <see cref="GameConfig.GravityMsFor"/> 就下落一格。</summary>
+    private double _accumulatorMs;
 
     public GameEngine(GameConfig config, IGameRules rules, IRandomSource random)
     {
@@ -49,6 +52,7 @@ public sealed class GameEngine : IGameEngine
         _bag.Clear();
 
         _state = new GameState(_config) { Status = GameStatus.Running };
+        _accumulatorMs = 0;
 
         SpawnNext();
     }
@@ -58,10 +62,49 @@ public sealed class GameEngine : IGameEngine
     public bool Apply(GameCommand command) =>
         throw new NotImplementedException("TODO(④)：命令处理尚未实现（A 的交付 ④）。");
 
-    /// <summary>TODO(④)：按重力推进一帧，尚未实现。</summary>
-    /// <exception cref="NotImplementedException">重力推进补齐之前调用会抛出。</exception>
-    public void Tick() =>
-        throw new NotImplementedException("TODO(④)：重力推进尚未实现（A 的交付 ④）。");
+    /// <summary>
+    /// 推进一帧：每帧累加 1/60 秒，攒够 <see cref="GameConfig.GravityMsFor"/> 就下落一格；
+    /// 已经贴底则锁定并出新块。非 <see cref="GameStatus.Running"/> 状态是空操作
+    /// （暂停时 <see cref="GameState.Frame"/> 不增长）。
+    /// </summary>
+    public void Tick()
+    {
+        if (_state.Status != GameStatus.Running)
+        {
+            return;
+        }
+
+        _state.Frame++;
+        _accumulatorMs += FrameMs;
+
+        if (_accumulatorMs < _config.GravityMsFor(_state.Level))
+        {
+            return;
+        }
+
+        // 按任务书 5.5：计时器直接清零，而不是减去重力间隔。
+        _accumulatorMs = 0;
+
+        var fallen = _state.Active.With(y: _state.Active.Y + 1);
+        if (!_rules.Collides(_state, fallen))
+        {
+            _state.Active = fallen;
+            return;
+        }
+
+        LockAndSpawn();
+    }
+
+    /// <summary>
+    /// 贴底后：交给规则锁定（写盘、消行、计分、升级），再出下一个方块。
+    /// 累加器清零，新块从完整的一个重力间隔重新计时。
+    /// </summary>
+    private void LockAndSpawn()
+    {
+        _rules.LockActive(_state);
+        SpawnNext();
+        _accumulatorMs = 0;
+    }
 
     /// <summary>
     /// 出下一个方块：先把预览队列补到 <c>PreviewCount + 1</c>，再出队一个放到生成位置；
