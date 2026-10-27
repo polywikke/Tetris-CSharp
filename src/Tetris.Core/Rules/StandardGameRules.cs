@@ -8,10 +8,9 @@ namespace Tetris.Core.Rules;
 /// C 的 AI 在副本上推演时可以直接复用同一个实例。
 /// </para>
 /// <para>
-/// 交付进度：① 规则三件套（<see cref="Collides"/>、<see cref="DropDistance"/>、<see cref="TryMove"/>）
-/// 与 ② 旋转踢墙（<see cref="TryRotate"/>）已完成；③ 锁定消行（<see cref="LockActive"/>）
-/// 按任务书顺序后续补在本类中，在补齐之前该方法会抛 <see cref="NotImplementedException"/>，
-/// 避免"静默返回错误结果"。
+/// 交付进度：① 规则三件套（<see cref="Collides"/>、<see cref="DropDistance"/>、<see cref="TryMove"/>）、
+/// ② 旋转踢墙（<see cref="TryRotate"/>）、③ 锁定消行计分（<see cref="LockActive"/>）均已实现，
+/// 任务书 01 中属于 A 的规则部分到此完整。
 /// </para>
 /// </summary>
 public sealed class StandardGameRules : IGameRules
@@ -172,8 +171,81 @@ public sealed class StandardGameRules : IGameRules
         return false;
     }
 
-    /// <summary>TODO(③)：锁定当前方块 → 消行 → 计分 → 升级，尚未实现。</summary>
-    /// <exception cref="NotImplementedException">交付 ③ 之前调用会抛出，避免静默返回错误结果。</exception>
-    public int LockActive(GameState state) =>
-        throw new NotImplementedException("TODO(③)：锁定、消行与计分尚未实现（A 的交付 ③）。");
+    /// <summary>
+    /// 把当前方块固定进棋盘 → 消行 → 计分 → 更新等级，返回本次消除的行数。
+    /// <b>不生成新方块</b>（那是 <see cref="IGameEngine"/> 的职责）：C 的 AI 会克隆状态反复调用它做推演，
+    /// 这里若顺手生成下一块，推演结果就被污染了。
+    /// </summary>
+    /// <remarks>
+    /// 流程与任务书 5.4 一致：
+    /// <list type="number">
+    /// <item>把 <see cref="GameState.Active"/> 的格子写进棋盘，<c>y &lt; 0</c> 的部分（探出顶部）直接丢弃；</item>
+    /// <item>用"写指针从底往上搬"一趟扫完：满行跳过，不满的行下沉，复杂度 O(H × W)；</item>
+    /// <item>顶部空出来的行显式清空；</item>
+    /// <item>计分用<b>升级前</b>的 <see cref="GameState.Level"/>，再累加消行数、最后重算等级
+    /// <c>LinesCleared / LevelUpLines + 1</c>。</item>
+    /// </list>
+    /// <para>
+    /// 防御性处理：<paramref name="state"/> 或其 <see cref="GameState.Active"/> 为 null 时返回 0；
+    /// <see cref="GameConfig.LevelUpLines"/> 被配成 0 或负数时等级保持 1，不抛除零异常。
+    /// </para>
+    /// </remarks>
+    public int LockActive(GameState state)
+    {
+        if (state is null || state.Active is null)
+        {
+            return 0;
+        }
+
+        var kind = state.Active.Kind;
+
+        // 1. 固定：只写棋盘内的格子，探出顶部的部分丢弃。
+        foreach (var cell in state.Active.Cells)
+        {
+            if (state.IsInside(cell.X, cell.Y))
+            {
+                state.Board[cell.X, cell.Y] = kind;
+            }
+        }
+
+        // 2. 从底往上搬：write 指向下一个要填的行，read 从底向上扫描原棋盘。
+        var cleared = 0;
+        var write = state.Height - 1;
+        for (var read = state.Height - 1; read >= 0; read--)
+        {
+            if (state.IsRowFull(read))
+            {
+                cleared++;
+                continue;
+            }
+
+            if (write != read)
+            {
+                for (var x = 0; x < state.Width; x++)
+                {
+                    state.Board[x, write] = state.Board[x, read];
+                }
+            }
+
+            write--;
+        }
+
+        // 3. 顶部空出来的行显式清空，避免残留上一局的方块。
+        for (; write >= 0; write--)
+        {
+            for (var x = 0; x < state.Width; x++)
+            {
+                state.Board[x, write] = null;
+            }
+        }
+
+        // 4. 计分用升级前的 Level，再累加消行、最后重算等级。
+        state.Score += state.Config.ScoreRule.ScoreFor(cleared, state.Level);
+        state.LinesCleared += cleared;
+
+        var linesPerLevel = state.Config.LevelUpLines;
+        state.Level = linesPerLevel > 0 ? state.LinesCleared / linesPerLevel + 1 : 1;
+
+        return cleared;
+    }
 }
