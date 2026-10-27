@@ -8,9 +8,8 @@ namespace Tetris.Core.Engine;
 /// 界面每帧读 <see cref="State"/>，<b>不要缓存这个引用跨局使用</b>——<see cref="Start"/> 会换一个新对象。
 /// </para>
 /// <para>
-/// 交付进度：开局、7-bag、预览队列与重力/锁定已完成；命令处理（<see cref="Apply"/>）
-/// 按任务书顺序后续补在本类中，在补齐之前它会抛 <see cref="NotImplementedException"/>，
-/// 避免静默假装成功。
+/// 命令处理遵循任务书 5.7：<see cref="GameStatus.Running"/> 之外的状态，除
+/// <see cref="GameCommand.Resume"/> 外一律拒绝且不改状态；软降贴底只返回 <c>false</c>，不会锁定。
 /// </para>
 /// </summary>
 public sealed class GameEngine : IGameEngine
@@ -57,10 +56,84 @@ public sealed class GameEngine : IGameEngine
         SpawnNext();
     }
 
-    /// <summary>TODO(④)：命令处理（移动/旋转/软降/硬降/暂停/继续），尚未实现。</summary>
-    /// <exception cref="NotImplementedException">命令处理补齐之前调用会抛出。</exception>
-    public bool Apply(GameCommand command) =>
-        throw new NotImplementedException("TODO(④)：命令处理尚未实现（A 的交付 ④）。");
+    /// <summary>
+    /// 执行一个意图。只有进行中才接受移动/旋转/软降/硬降/暂停；暂停中只接受
+    /// <see cref="GameCommand.Resume"/>。被拒绝时返回 <c>false</c>、不改任何状态、不抛异常。
+    /// </summary>
+    public bool Apply(GameCommand command)
+    {
+        // Resume 是唯一在非 Running 状态下合法的命令，必须先于状态门禁处理。
+        if (command == GameCommand.Resume)
+        {
+            if (_state.Status != GameStatus.Paused)
+            {
+                return false;
+            }
+
+            _state.Status = GameStatus.Running;
+            return true;
+        }
+
+        if (_state.Status != GameStatus.Running)
+        {
+            return false;
+        }
+
+        switch (command)
+        {
+            case GameCommand.MoveLeft:
+                return _rules.TryMove(_state, -1);
+
+            case GameCommand.MoveRight:
+                return _rules.TryMove(_state, 1);
+
+            case GameCommand.RotateCw:
+                return _rules.TryRotate(_state, 1);
+
+            case GameCommand.RotateCcw:
+                return _rules.TryRotate(_state, -1);
+
+            case GameCommand.SoftDrop:
+                return SoftDrop();
+
+            case GameCommand.HardDrop:
+                return HardDrop();
+
+            case GameCommand.Pause:
+                _state.Status = GameStatus.Paused;
+                return true;
+
+            // GameCommand.None 以及将来新增但这里还没接的命令：一律当作无效意图。
+            default:
+                return false;
+        }
+    }
+
+    /// <summary>软降一格：能下就下并返回 true；贴底返回 false，且<b>不锁定</b>（锁定交给重力或硬降）。</summary>
+    private bool SoftDrop()
+    {
+        var dropped = _state.Active.With(y: _state.Active.Y + 1);
+        if (_rules.Collides(_state, dropped))
+        {
+            return false;
+        }
+
+        _state.Active = dropped;
+        return true;
+    }
+
+    /// <summary>硬降：直接落到底并立即锁定出新块。距离为 0 时也照常锁定，不会"卡住不落"。</summary>
+    private bool HardDrop()
+    {
+        var distance = _rules.DropDistance(_state, _state.Active);
+        if (distance > 0)
+        {
+            _state.Active = _state.Active.With(y: _state.Active.Y + distance);
+        }
+
+        LockAndSpawn();
+        return true;
+    }
 
     /// <summary>
     /// 推进一帧：每帧累加 1/60 秒，攒够 <see cref="GameConfig.GravityMsFor"/> 就下落一格；
