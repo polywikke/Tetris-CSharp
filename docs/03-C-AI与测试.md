@@ -297,4 +297,47 @@ publish 是 A 的交付物（见 01 §七）。你录视频前找 A 要一份最
 | 7 | 用 A 给的 publish 产物 | 双击能运行 |
 | 8 | 文档 | README 与实际一致，没有过时内容 |
 
+---
+
+## 八、实现记录（feat/ai 分支）
+
+### 8.1 交付
+
+| 文件 | 说明 |
+|---|---|
+| `src/Tetris.AI/BoardEvaluator.cs` | 四项特征：消行、聚合高度、洞、凹凸度；权重按 4.2 节（0.76 / −0.51 / −0.36 / −0.18） |
+| `src/Tetris.AI/PlacementFinder.cs` | 1-ply 全落点搜索（4 旋转 × 全部合法列，Clone 推演，绝不改传入 state）；2-ply 为可选项 |
+| `src/Tetris.AI/HeuristicAgent.cs` | 指令状态机 + 三条兜底 + `IPlayerAgentDebug` |
+| `tests/Tetris.Core.Tests/Fakes/FakeGameRules.cs` | 假规则（含踢墙、消行、计分），不依赖 A 的进度 |
+| `tests/Tetris.Core.Tests/Fakes/SimulatedGame.cs` | 迷你引擎：逐帧应用 `GameCommand`、硬降后锁定并出下一块 |
+| `BoardEvaluatorTests` / `PlacementFinderTests` / `HeuristicAgentTests` | 32 个新用例，连同原有 9 个契约测试共 41 个 |
+
+接口一交付即可接真引擎：`new HeuristicAgent(state.Config, new GameEngine(...))`，AI 不自己实现碰撞/消行。
+
+### 8.2 与任务书的两处偏差（都有实测依据）
+
+1. **2-ply 不截断 top-6，而是对全部候选做第二层。**
+   只给前 6 名加权会造成分数尺度不一致：未加权的候选拿着"纯 1-ply 分"，反而排到加权后的候选前面。
+   实测这种实现会让 AI 专挑中间列、15 块内把自己堆死。全量 2-ply 每次决策约 1600 次模拟。
+2. **2-ply 默认关闭（`useLookahead: false`），作为可选开关保留。**
+   按 0.4 权重加权后，AI 会为了"下一块能消一行"先堆高，12×16 盘上约 380 帧顶死；
+   纯 1-ply 能稳定跑满 6000 帧。要复现/调参就把 `useLookahead` 打开。
+
+### 8.3 实测数据（12×16 假引擎，I,O,T,S,Z,J,L 循环出块）
+
+| 配置 | 存活帧数 | 消行 | 平均决策耗时 | 最差单次 |
+|---|---|---|---|---|
+| 1-ply（默认） | 6000+（未顶死） | 16+ | 0.13 ms | 3.6 ms |
+| 2-ply（w=0.4） | 380（顶死） | 16 | 4.8 ms | 12.9 ms |
+
+1-ply 也能在 200 帧内消行、单次决策远低于 8ms 预算。
+
+### 8.4 已知不足 / 后续 TODO
+
+- 4 个特征的权重是任务书给定的，实测会出现"留一口边井不填"的僵局（凹凸度惩罚不够大时 AI 宁可绕开边列）；
+  要提升平均分，可在报告里做权重网格调参（`BoardEvaluator` 已是纯函数，方便扫参）。
+- 等 A 交付真 `GameEngine` 后，把 §5.2 里 `[Fact(Skip = ...)]` 的规则用例取消 Skip，并补一局"AI 打真引擎"的集成测试。
+- 10 局平均分、覆盖率报告、2-ply vs 1-ply 的对照数据还没跑（需要真引擎稳定后做）。
+
+
 
