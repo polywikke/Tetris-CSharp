@@ -297,4 +297,58 @@ publish 是 A 的交付物（见 01 §七）。你录视频前找 A 要一份最
 | 7 | 用 A 给的 publish 产物 | 双击能运行 |
 | 8 | 文档 | README 与实际一致，没有过时内容 |
 
+---
+
+## 八、实现记录（feat/ai 分支）
+
+### 8.1 交付
+
+| 文件 | 说明 |
+|---|---|
+| `src/Tetris.AI/BoardEvaluator.cs` | 四项特征：消行、聚合高度、洞、凹凸度；权重按 4.2 节（0.76 / −0.51 / −0.36 / −0.18） |
+| `src/Tetris.AI/PlacementFinder.cs` | 1-ply 全落点搜索（4 旋转 × 全部合法列，Clone 推演，绝不改传入 state）；2-ply 在并列最优里裁决（默认开启） |
+| `src/Tetris.AI/HeuristicAgent.cs` | 指令状态机 + 三条兜底 + `IPlayerAgentDebug` |
+| `tests/Tetris.Core.Tests/Fakes/FakeGameRules.cs` | 假规则（含踢墙、消行、计分），不依赖 A 的进度 |
+| `tests/Tetris.Core.Tests/Fakes/SimulatedGame.cs` | 迷你引擎：逐帧应用 `GameCommand`、硬降后锁定并出下一块 |
+| `BoardEvaluatorTests` / `PlacementFinderTests` / `HeuristicAgentTests` | 34 个新用例，连同原有 9 个契约测试共 43 个 |
+
+接口一交付即可接真引擎：`new HeuristicAgent(state.Config, new GameEngine(...))`，AI 不自己实现碰撞/消行。
+
+### 8.2 与任务书的偏差与实现取舍
+
+1. **2-ply 只在"并列最优"的候选里裁决，而不是给所有候选加权求和。**
+   任务书写的是 `total = c.Score + 0.4 × best(next)` 全量加权。实测那样 380 帧就顶死：
+   加权后的分数普遍偏低，AI 为了"下一块能消一行"先把棋盘堆成塔。
+   改为"1-ply 分落在最优分 0.15 以内（约半行的价值）的候选才交给 2-ply 裁决"后，
+   2-ply 只负责打破 1-ply 的犹豫，平均分反而更高（见 8.3）。
+   候选列表里的 `Score` 始终是纯 1-ply 分，热力图尺度一致。
+2. **不按 top-K 截断候选。** 单次决策最多 48 个候选，全量 1-ply 打分只要约 0.06ms，截断没有收益。
+
+### 8.3 实测数据（12×16 假引擎，7-bag 洗牌、每局不同随机种子、各 10 局）
+
+| 配置 | 平均分 | 平均消行 | 平均存活帧 | 平均决策耗时 | 最差单次 |
+|---|---|---|---|---|---|
+| 1-ply | 1420 | 14.2 | 360 | 0.058 ms | 4.1 ms |
+| 2-ply（t=0.05） | 1980 | 19.8 | 460 | 0.166 ms | 5.2 ms |
+| **2-ply（t=0.15，默认）** | **1970** | **19.7** | **457** | **0.171 ms** | **4.7 ms** |
+| 2-ply（t=0.30） | 1960 | 19.6 | 457 | 0.195 ms | 6.0 ms |
+
+2-ply 平均分比 1-ply 高约 39%、平均多消 5.5 行，决策耗时仍远低于 8ms 帧预算。
+固定 I,O,T,S,Z,J,L 循环（不洗牌）时，2-ply 能到 49 行 / 4900 分，1-ply 为 16 行 / 1600 分。
+
+### 8.4 修掉的两个卡死问题
+
+- **计划不可达导致死循环**：方块挪不动又被墙卡住时，状态机每 2 帧重规划一次、每次都得回同一个落点，
+  而 `_framesOnPiece` 又被重规划清零，于是永远不硬降——实测 20 万帧只消了 16 行、棋局永远不结束。
+  现在：重规划不再清零帧计数；连续 `MaxStuckReplans = 3` 次重规划仍无进展就强制硬降。
+- 新增回归用例 `Agent_ShouldReachGameOverInsteadOfStalling`（5000 帧内必须正常结束）。
+
+### 8.5 已知不足 / 后续 TODO
+
+- 4 个特征的权重仍是任务书给定值，会留"边井"僵局（边列基本只能靠 O/I 填）；
+  要再提平均分可做权重网格调参（`BoardEvaluator` 是纯函数，方便扫参）。
+- 等 A 合并真 `GameEngine` 后，补一局"AI 打真引擎"的集成测试（现在 Core 里还没有 `GameEngine`）。
+- 覆盖率报告需要在能跑 `dotnet test --collect:"XPlat Code Coverage"` 的机器上生成（沙箱里 testhost 起不来）。
+
+
 
