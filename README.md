@@ -35,9 +35,25 @@ dotnet publish src/Tetris.App -c Release -r win-x64 --self-contained false -o pu
 | 空格 | 硬降 |
 | P / Esc | 暂停 / 继续 |
 | F2 | 重新开始 |
-| F3 | AI 观战 / 玩家接管（AI 接入后可用） |
+| F3 | AI 观战 / 玩家接管（AI 侧已就绪，界面接线由 B 完成） |
 
 分数以十六进制显示；最高分保存在 `%AppData%\TetrisCourse\highscore.xml`。
+
+## AI 自动玩家（C 部分）
+
+`src/Tetris.AI` 是不依赖界面的启发式 AI，实现 `IPlayerAgent`：
+
+```csharp
+var agent = new HeuristicAgent(state.Config, rules);   // rules 由 A 的引擎提供
+var command = agent.NextCommand(state);                // 每逻辑帧一条指令，不修改 state
+```
+
+- **评估函数**（`BoardEvaluator`）：消行 ×0.76 − 聚合高度 ×0.51 − 洞 ×0.36 − 凹凸度 ×0.18。
+- **落点搜索**（`PlacementFinder`）：4 个旋转态 × 每一列，`Clone` 推演落底并消行后打分；2-ply 只在"并列最优"的候选里做裁决。
+- **指令状态机**（`HeuristicAgent`）：旋转 → 平移 → 硬降；带旋转放弃、单块 120 帧超时、计划不可达三路兜底，保证不会卡死。
+- **决策可视化**（`IPlayerAgentDebug`）：`Candidates` / `Chosen` 供界面画候选热力图（F3 接线由 B 完成）。
+
+12×16 棋盘、7-bag 随机出块、10 局实测：平均 1970 分 / 19.7 行（纯 1-ply 为 1420 分 / 14.2 行），单次决策平均 0.17ms，远低于 8ms 帧预算。数据与调参记录见 [docs/03](docs/03-C-AI与测试.md) 第八节。
 
 ## 文档
 

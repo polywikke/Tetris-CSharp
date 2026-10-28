@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using Tetris.AI;
 using Tetris.Core;
 using Tetris.Core.Tests.Fakes;
@@ -165,6 +165,22 @@ public class PlacementFinderTests
         Assert.Equal(
             searched.Select(c => (c.Rotation, c.X)).ToArray(),
             direct.Select(c => (c.Rotation, c.X)).ToArray());
+    }
+
+    [Fact]
+    public void Lookahead_ShouldOnlyChooseAmongNearTiedCandidates()
+    {
+        var finder = new PlacementFinder(new FakeGameRules());
+        var state = NewState(PieceKind.T);
+        state.NextQueue.Enqueue(PieceKind.I);
+
+        var result = finder.FindBest(state);
+
+        Assert.NotNull(result.Best);
+        var max = result.Candidates.Max(c => c.Score);
+        Assert.True(
+            result.Best!.Score >= max - PlacementFinder.DefaultLookaheadTolerance - 1e-9,
+            $"2-ply 只在并列最优里裁决，不应选比最优低 {max - result.Best.Score:F2} 分的落点");
     }
 
     [Fact]

@@ -152,6 +152,19 @@ public class HeuristicAgentTests
     }
 
     [Fact]
+    public void Agent_ShouldReachGameOverInsteadOfStalling()
+    {
+        var game = new SimulatedGame();
+        var agent = new HeuristicAgent(game.State.Config, game.Rules);
+
+        game.Run(agent, 5000);
+
+        // 旧实现遇到"计划不可达"（挪不动、又转不了）会每 2 帧重规划一次、永远不硬降，
+        // 棋局就卡在 Running 直到帧数上限。修好后必须能正常结束。
+        Assert.Equal(GameStatus.GameOver, game.State.Status);
+    }
+
+    [Fact]
     public void Agent_ShouldKeepRunningWithoutPreviewQueue()
     {
         var game = new SimulatedGame();

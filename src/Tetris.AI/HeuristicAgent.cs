@@ -1,4 +1,4 @@
-﻿using Tetris.Core;
+using Tetris.Core;
 
 namespace Tetris.AI;
 
@@ -33,6 +33,9 @@ public sealed class HeuristicAgent : IPlayerAgent, IPlayerAgentDebug
     /// <summary>连续多少帧"方块位置完全没变"就判定被卡住，重新规划。</summary>
     public const int StuckFrameThreshold = 2;
 
+    /// <summary>卡住后最多重规划几次；超过说明落点本身不可达，直接硬降。</summary>
+    public const int MaxStuckReplans = 3;
+
     private static readonly IReadOnlyList<AgentCandidate> NoCandidates = Array.Empty<AgentCandidate>();
 
     private readonly GameConfig _config;
@@ -45,6 +48,7 @@ public sealed class HeuristicAgent : IPlayerAgent, IPlayerAgentDebug
     private int _framesOnPiece;
     private int _rotationAttempts;
     private int _stuckFrames;
+    private int _stuckReplans;
     private bool _rotationAbandoned;
 
     private int _lastX = int.MinValue;
@@ -53,17 +57,19 @@ public sealed class HeuristicAgent : IPlayerAgent, IPlayerAgentDebug
 
     /// <param name="config">棋盘尺寸等参数（与引擎共用同一个实例）。</param>
     /// <param name="rules">A 的规则实现。</param>
-    /// <param name="useLookahead">是否做 2-ply 展望；关掉就是纯 1-ply（更快，也更短视）。</param>
+    /// <param name="useLookahead">是否用 2-ply 裁决"并列最优"；关掉就是纯 1-ply（更快，也更短视）。</param>
     /// <param name="lookaheadWeight">2-ply 第二层的权重。</param>
+    /// <param name="lookaheadTolerance">"并列最优"的容差，见 <see cref="PlacementFinder.DefaultLookaheadTolerance"/>。</param>
     public HeuristicAgent(
         GameConfig config,
         IGameRules rules,
-        bool useLookahead = false,
-        double lookaheadWeight = PlacementFinder.DefaultLookaheadWeight)
+        bool useLookahead = true,
+        double lookaheadWeight = PlacementFinder.DefaultLookaheadWeight,
+        double lookaheadTolerance = PlacementFinder.DefaultLookaheadTolerance)
     {
         _config = config ?? throw new ArgumentNullException(nameof(config));
         _rules = rules ?? throw new ArgumentNullException(nameof(rules));
-        _finder = new PlacementFinder(_rules, useLookahead, lookaheadWeight);
+        _finder = new PlacementFinder(_rules, useLookahead, lookaheadWeight, lookaheadTolerance);
     }
 
     public string Name => $"启发式 v1({_config.BoardWidth}x{_config.BoardHeight})";
@@ -89,6 +95,7 @@ public sealed class HeuristicAgent : IPlayerAgent, IPlayerAgentDebug
         _framesOnPiece = 0;
         _rotationAttempts = 0;
         _stuckFrames = 0;
+        _stuckReplans = 0;
         _rotationAbandoned = false;
         _lastX = int.MinValue;
         _lastY = int.MinValue;
@@ -113,6 +120,8 @@ public sealed class HeuristicAgent : IPlayerAgent, IPlayerAgentDebug
 
         if (_plan is null || _plan.Kind != state.Active.Kind)
         {
+            _framesOnPiece = 0;
+            _stuckReplans = 0;
             Replan(state);
             if (_plan is null)
             {
@@ -129,6 +138,14 @@ public sealed class HeuristicAgent : IPlayerAgent, IPlayerAgentDebug
 
         if (IsStuck(state))
         {
+            // 连续重规划仍然是同一个落点、又挪不动 → 说明计划本身不可达（被墙/被堆顶卡住），
+            // 再算下去只会死循环，直接硬降把方块处理掉。
+            _stuckReplans++;
+            if (_stuckReplans > MaxStuckReplans)
+            {
+                return HardDropAndForget();
+            }
+
             Replan(state);
             if (_plan is null)
             {
@@ -170,7 +187,6 @@ public sealed class HeuristicAgent : IPlayerAgent, IPlayerAgentDebug
         _candidates = search.Candidates;
         _chosen = search.Best;
         _plan = search.Best;
-        _framesOnPiece = 0;
         _rotationAttempts = 0;
         _stuckFrames = 0;
         _rotationAbandoned = false;

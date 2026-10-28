@@ -16,15 +16,15 @@ public sealed record PlacementSearchResult(
 /// <para>
 /// <b>1-ply</b>：对 4 个旋转态 × 每一列，先 <see cref="GameState.Clone"/> 再试放、落到底、
 /// <see cref="IGameRules.LockActive"/>，然后用 <see cref="BoardEvaluator"/> 打分。<br/>
-/// <b>2-ply</b>（可选，默认关闭）：对每个候选再枚举 <see cref="GameState.PeekNext"/> 的下一块，
-/// 取 <c>当前分 + 0.4 × 下一块最优分</c> 作为最终分，避免"现在消一行、下一块必死"的短视。
+/// <b>2-ply</b>（可选，默认<b>开启</b>）：先用 1-ply 分圈出"几乎并列最优"的一小撮候选
+/// （差距不超过 <see cref="DefaultLookaheadTolerance"/>），只有在这一撮里才用
+/// <c>当前分 + 0.4 × 下一块最优分</c> 做裁决。不参与裁决的候选仍用纯 1-ply 分，
+/// 因此候选列表里的 <see cref="AgentCandidate.Score"/> 始终是同一把尺子。
 /// </para>
 /// <para>
-/// 与任务书的两处偏差，均已用 12×16 假引擎长跑验证：<br/>
-/// ① 2-ply 对<b>所有候选</b>做，而不是只对 top-6：只给 top-6 加权会让分数尺度不一致
-/// （未加权的候选反而"看起来更好"），实测 AI 会把方块往中间堆。<br/>
-/// ② 2-ply 默认<b>关闭</b>：按 0.4 权重加权后，AI 会为了"下一块能消一行"而先堆高，
-/// 实测约 380 帧就顶死（1-ply 能跑满 6000 帧）。2-ply 保留为可选开关，供调参/实验用。
+/// 为什么不是"所有候选都加权"：那是第一版实现，实测 380 帧就顶死——加权后的分数
+/// 普遍比未加权的低，AI 会为了"下一块能消一行"先把棋盘堆成塔。改成"只在并列最优里裁决"
+/// 后，2-ply 只负责打破 1-ply 的犹豫，12×16 假引擎长跑的平均分高于纯 1-ply（见 docs/03 第八节）。
 /// </para>
 /// <para>整个过程<b>不修改传入的 state</b>：所有推演都在 Clone 上完成。</para>
 /// </summary>
@@ -33,21 +33,31 @@ public sealed class PlacementFinder
     /// <summary>第二层的权重，默认 0.4（越看重未来越大，但不能盖过当前局面）。</summary>
     public const double DefaultLookaheadWeight = 0.4;
 
+    /// <summary>
+    /// "并列最优"的容差：只有 1-ply 分落在 <c>最优分 - 容差</c> 以内的候选，
+    /// 才交给 2-ply 裁决。默认 0.15，约等于半行的价值。
+    /// </summary>
+    public const double DefaultLookaheadTolerance = 0.15;
+
     private readonly IGameRules _rules;
     private readonly bool _useLookahead;
     private readonly double _lookaheadWeight;
+    private readonly double _lookaheadTolerance;
 
     /// <param name="rules">A 的规则实现（或测试替身）。</param>
-    /// <param name="useLookahead">是否做 2-ply 展望；关掉就退化成纯 1-ply。</param>
+    /// <param name="useLookahead">是否做 2-ply 裁决；关掉就退化成纯 1-ply。</param>
     /// <param name="lookaheadWeight">2-ply 第二层的权重。</param>
+    /// <param name="lookaheadTolerance">"并列最优"的容差，见 <see cref="DefaultLookaheadTolerance"/>。</param>
     public PlacementFinder(
         IGameRules rules,
-        bool useLookahead = false,
-        double lookaheadWeight = DefaultLookaheadWeight)
+        bool useLookahead = true,
+        double lookaheadWeight = DefaultLookaheadWeight,
+        double lookaheadTolerance = DefaultLookaheadTolerance)
     {
         _rules = rules ?? throw new ArgumentNullException(nameof(rules));
         _useLookahead = useLookahead;
         _lookaheadWeight = lookaheadWeight;
+        _lookaheadTolerance = Math.Max(0d, lookaheadTolerance);
     }
 
     /// <summary>是否启用了 2-ply 展望。</summary>
@@ -64,39 +74,63 @@ public sealed class PlacementFinder
             return new PlacementSearchResult(Array.Empty<AgentCandidate>(), null);
         }
 
-        var useLookahead = _useLookahead && state.NextQueue.Count > 0;
-        var nextKind = useLookahead ? state.PeekNext(1)[0] : default;
-
         var candidates = new AgentCandidate[scored.Count];
-        AgentCandidate? best = null;
-        var bestScore = double.NegativeInfinity;
-
         for (var i = 0; i < scored.Count; i++)
         {
-            var candidate = scored[i].Candidate;
-            if (useLookahead)
-            {
-                // 注意：2-ply 加权必须对所有候选都做，只加权 top-K 会让分数尺度不一致，
-                // 未加权的候选反而"看起来更好"，AI 会去堆中间列（实测会 15 块内把自己堆死）。
-                var followUp = BestSinglePlyScore(scored[i].ResultingState, nextKind);
-                if (followUp.HasValue)
-                {
-                    candidate = candidate with
-                    {
-                        Score = candidate.Score + (_lookaheadWeight * followUp.Value),
-                    };
-                }
-            }
+            candidates[i] = scored[i].Candidate;
+        }
 
-            candidates[i] = candidate;
-            if (candidate.Score > bestScore)
+        // 1) 纯 1-ply 的最优者。
+        var chosen = BestIndex(candidates, chosen: 0, candidates.Length);
+
+        // 2) 2-ply 只在"几乎并列最优"的小圈子里做裁决：
+        //    加权分只用于裁决，不写回候选列表，保证所有 Score 仍是同一把尺子（纯 1-ply 分）。
+        if (_useLookahead && state.NextQueue.Count > 0)
+        {
+            var nextKind = state.PeekNext(1)[0];
+            var floor = candidates[chosen].Score - _lookaheadTolerance;
+            var bestCombined = double.NegativeInfinity;
+
+            for (var i = 0; i < scored.Count; i++)
             {
-                bestScore = candidate.Score;
-                best = candidate;
+                if (candidates[i].Score < floor)
+                {
+                    continue;
+                }
+
+                var followUp = BestSinglePlyScore(scored[i].ResultingState, nextKind);
+                if (!followUp.HasValue)
+                {
+                    continue;
+                }
+
+                var combined = candidates[i].Score + (_lookaheadWeight * followUp.Value);
+                if (combined > bestCombined + ScoreEpsilon ||
+                    (Math.Abs(combined - bestCombined) <= ScoreEpsilon && candidates[i].Score > candidates[chosen].Score))
+                {
+                    bestCombined = combined;
+                    chosen = i;
+                }
             }
         }
 
-        return new PlacementSearchResult(candidates, best);
+        return new PlacementSearchResult(candidates, candidates[chosen]);
+    }
+
+    /// <summary>浮点比较的容差。</summary>
+    private const double ScoreEpsilon = 1e-9;
+
+    private static int BestIndex(IReadOnlyList<AgentCandidate> candidates, int chosen, int count)
+    {
+        for (var i = 1; i < count; i++)
+        {
+            if (candidates[i].Score > candidates[chosen].Score)
+            {
+                chosen = i;
+            }
+        }
+
+        return chosen;
     }
 
     /// <summary>
