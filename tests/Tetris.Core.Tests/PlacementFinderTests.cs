@@ -139,16 +139,54 @@ public class PlacementFinderTests
     }
 
     [Fact]
-    public void ForO_OnEmptyBoard_ShouldOfferTenColumnsPerRotation()
+    public void ForO_OnEmptyBoard_ShouldOfferElevenColumnsPerRotation()
     {
         var finder = new PlacementFinder(new FakeGameRules(), useLookahead: false);
         var state = NewState(PieceKind.O);
 
         var result = finder.FindBest(state);
 
-        // O 的 4 个旋转态完全相同；盒子有 4 列，O 只占中间两列 → 12 - 2 = 10 个可放列。
-        Assert.Equal(40, result.Candidates.Count);
-        Assert.Equal(10, result.Candidates.Count(c => c.Rotation == 0));
+        // O 占盒内 x=1、2，盒子左列最左可到 -1（占棋盘第 0、1 列）→ 每旋转态 11 个列位。
+        Assert.Equal(44, result.Candidates.Count);
+        Assert.Equal(11, result.Candidates.Count(c => c.Rotation == 0));
+    }
+
+    [Fact]
+    public void ForVerticalI_ShouldCoverEveryColumn()
+    {
+        var finder = new PlacementFinder(new FakeGameRules(), useLookahead: false);
+        var state = NewState(PieceKind.I);
+        state.Active = state.Active.With(rotation: 1);   // 竖放：只占盒内第 2 列
+
+        var columns = finder.FindBest(state).Candidates
+            .Where(c => c.Rotation == 1)
+            .Select(c => c.X + 2)                        // 盒内偏移换算成棋盘列
+            .OrderBy(x => x)
+            .ToArray();
+
+        // 修复前盒子左列从 0 起，竖 I 永远到不了第 0、1 列
+        Assert.Equal(Enumerable.Range(0, state.Width), columns);
+    }
+
+    [Fact]
+    public void EveryCandidate_ShouldStayInsideBoard()
+    {
+        var finder = new PlacementFinder(new FakeGameRules(), useLookahead: false);
+
+        foreach (var kind in Enum.GetValues<PieceKind>())
+        {
+            var state = NewState(kind);
+            foreach (var candidate in finder.FindBest(state).Candidates)
+            {
+                var piece = state.Active.With(x: candidate.X, y: candidate.Y, rotation: candidate.Rotation);
+                foreach (var cell in piece.Cells)
+                {
+                    // 盒子左列允许为负，但真正占用的格子必须落在棋盘内
+                    Assert.InRange(cell.X, 0, state.Width - 1);
+                    Assert.InRange(cell.Y, 0, state.Height - 1);
+                }
+            }
+        }
     }
 
     [Fact]

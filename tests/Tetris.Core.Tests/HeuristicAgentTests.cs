@@ -152,16 +152,22 @@ public class HeuristicAgentTests
     }
 
     [Fact]
-    public void Agent_ShouldReachGameOverInsteadOfStalling()
+    public void Agent_ShouldKeepMakingProgressInsteadOfStalling()
     {
         var game = new SimulatedGame();
         var agent = new HeuristicAgent(game.State.Config, game.Rules);
 
-        game.Run(agent, 5000);
+        game.Run(agent, 2500);
+        var firstWindow = game.State.LinesCleared;
+        game.Run(agent, 2500);
 
         // 旧实现遇到"计划不可达"（挪不动、又转不了）会每 2 帧重规划一次、永远不硬降，
-        // 棋局就卡在 Running 直到帧数上限。修好后必须能正常结束。
-        Assert.Equal(GameStatus.GameOver, game.State.Status);
+        // 棋局就卡在 Running 且一行都消不掉。修好后 AI 能一直活下去，所以判据从
+        // "必须 GameOver" 改成"两个窗口之间必须持续消行"——这才真正在测"没卡死"。
+        Assert.True(firstWindow > 0);
+        Assert.True(
+            game.State.LinesCleared - firstWindow >= 100,
+            $"后 2500 帧只消了 {game.State.LinesCleared - firstWindow} 行");
     }
 
     [Fact]
