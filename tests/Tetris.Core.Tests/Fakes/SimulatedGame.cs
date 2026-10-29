@@ -18,10 +18,11 @@ public sealed class SimulatedGame
 
     /// <param name="config">棋盘配置，默认 12×16。</param>
     /// <param name="sequence">方块出场顺序；省略时按 I,O,T,S,Z,J,L 循环。</param>
-    public SimulatedGame(GameConfig? config = null, IEnumerable<PieceKind>? sequence = null)
+    /// <param name="rules">规则实现；默认用 <see cref="FakeGameRules"/>，可换成 <c>StandardGameRules</c>。</param>
+    public SimulatedGame(GameConfig? config = null, IEnumerable<PieceKind>? sequence = null, IGameRules? rules = null)
     {
         State = new GameState(config ?? GameConfig.Default);
-        Rules = new FakeGameRules();
+        Rules = rules ?? new FakeGameRules();
         _sequence = sequence?.ToArray() ?? DefaultSequence;
         if (_sequence.Length == 0)
         {
@@ -39,7 +40,7 @@ public sealed class SimulatedGame
 
     public GameState State { get; }
 
-    public FakeGameRules Rules { get; }
+    public IGameRules Rules { get; }
 
     /// <summary>应用一条指令；返回它是否真的改变了状态。</summary>
     public bool Apply(GameCommand command)
