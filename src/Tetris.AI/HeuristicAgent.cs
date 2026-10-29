@@ -6,7 +6,7 @@ namespace Tetris.AI;
 /// 启发式自动玩家（C 实现）：用 <see cref="PlacementFinder"/> 为当前方块选一个落点，
 /// 再用一个每帧只发一条指令的状态机把方块挪过去，最后硬降锁定。
 /// <para>
-/// 指令状态机（docs/03-C-AI与测试.md §4）：
+/// 指令状态机（docs/设计说明.md §4.3）：
 /// <list type="number">
 /// <item>没有计划、或换了一块新方块 → 重新搜索落点；</item>
 /// <item>当前旋转态不是计划里的 → <see cref="GameCommand.RotateCw"/>；</item>

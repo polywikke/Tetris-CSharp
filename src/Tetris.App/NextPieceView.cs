@@ -4,7 +4,7 @@ using Tetris.Core;
 namespace Tetris.App;
 
 /// <summary>
-/// "下一个方块"的<b>图形</b>预览（B 负责，任务书 02 §四）。
+/// "下一个方块"的<b>图形</b>预览。
 /// <para>
 /// 画出方块的出生姿态（rotation 0），按 <see cref="PieceShape.BoxSize"/>（4×4）包围盒居中，
 /// 再按控件大小等比缩放：控件多小方格就多小，不会糊也不会溢出，缩放到 40px 仍能看出形状。

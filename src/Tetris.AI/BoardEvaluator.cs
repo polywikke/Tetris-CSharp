@@ -3,7 +3,7 @@ using Tetris.Core;
 namespace Tetris.AI;
 
 /// <summary>
-/// 一块棋盘的量化指标。四项特征的取值口径与 docs/03-C-AI与测试.md §3.1 完全一致：
+/// 一块棋盘的量化指标。四项特征的取值口径与 docs/设计说明.md §4.1 完全一致：
 /// <list type="bullet">
 /// <item><see cref="AggregateHeight"/>：各列高度之和，列高 = 该列最高格到棋盘顶部的距离；</item>
 /// <item><see cref="Holes"/>：被固定方块压在下面的空格总数（每列单独数）；</item>
@@ -21,7 +21,7 @@ public readonly record struct BoardMetrics(int AggregateHeight, int Holes, int B
 /// 评估函数（C 实现）。纯读操作：只观察 <see cref="GameState.Board"/>，不修改状态、不分配棋盘副本。
 /// <para>
 /// 评分 = 0.76 × 消行数 − 0.51 × 总高度 − 0.36 × 空洞数 − 0.18 × 凹凸度。<br/>
-/// 权重由 docs/03-C-AI与测试.md §3.1 给定：消行是唯一正收益，其余三项都是惩罚项；
+/// 权重为固定值（见 docs/设计说明.md §4.1）：消行是唯一正收益，其余三项都是惩罚项；
 /// 空洞的惩罚仅次于消行，因为空洞只能靠消行补救，是局面变差的最强信号。
 /// </para>
 /// </summary>

@@ -11,7 +11,7 @@ namespace Tetris.App;
 /// 它不认识 A 的规则实现，只认识 <see cref="IGameEngine"/> / <see cref="IGameRules"/> 两个接口；
 /// AI 也是通过 <see cref="IPlayerAgent"/> 接入的，界面不知道 C 的启发式是怎么算的。
 /// <para>
-/// 输入分两路，这也是任务书 02 §五 的核心：
+/// 输入分两路：
 /// <list type="bullet">
 /// <item><b>一次性</b>命令（旋转、硬降、暂停）在 <see cref="ProcessCmdKey"/> 里按下当帧直接下发，
 /// 按住不放不会连发；</item>
@@ -122,7 +122,7 @@ public sealed class MainForm : Form
         var loaded = _store.Load();
         _highScore = loaded.Record;
 
-        // 每种情况的提示都控制在 16 字以内（任务书 02 §七：侧栏不许被长句撑破）。
+        // 每种情况的提示都控制在 16 字以内（侧栏不许被长句撑破）。
         _noticeLabel.Text = loaded.Status switch
         {
             HighScoreLoadStatus.Missing => "首次运行，暂无存档",
@@ -276,7 +276,7 @@ public sealed class MainForm : Form
         UpdateHud();
     }
 
-    /// <summary>暂停 + 清空按键：Alt+Tab、最小化、窗口失焦时调用（任务书 §五 的加分项）。</summary>
+    /// <summary>暂停 + 清空按键：Alt+Tab、最小化、窗口失焦时调用。</summary>
     private void LeaveGame()
     {
         _keys.Clear();
@@ -344,7 +344,7 @@ public sealed class MainForm : Form
             return;
         }
 
-        // 任务书 02 §九 要求的一行：评分 | 消行 | 空洞 | 凹凸（全部取自 AI 选中的那个候选）。
+        // 侧栏的一行：评分 | 消行 | 空洞 | 凹凸（全部取自 AI 选中的那个候选）。
         _aiLabel.Text =
             $"评分 {chosen.Score:F1} | 消行 {chosen.ClearedLines} | 空洞 {chosen.Holes} | 凹凸 {chosen.Bumpiness}";
     }
