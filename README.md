@@ -14,10 +14,28 @@
 - AI 落点可视化：选中落点实心高亮 + 整体外框，其余只画前 6 名轮廓
 - DAS 连发（长按左右/软降）、下一个方块预览
 
+## 一键启动（推荐给第一次下载的人）
+
+双击仓库根目录的 **`run.cmd`**，脚本会自动完成四件事：
+
+1. 检查 Windows 与 .NET 10 SDK；
+2. 缺少 SDK 时**自动下载并安装**（用户级，不需要管理员权限）；
+3. 只编译游戏项目（不碰测试，所以**离线也能编译**）；
+4. 启动游戏窗口。
+
+也可以在 PowerShell 里手动执行：
+
+```powershell
+.\run.ps1              # 检查 + 编译 + 启动
+.\run.ps1 -SkipLaunch  # 只检查 + 编译，不启动
+```
+
+> 执行策略被拦时用：`powershell -ExecutionPolicy Bypass -File .\run.ps1`
+
 ## 环境要求
 
-- .NET SDK 10.0（`dotnet --version` → `10.0.x`）
 - Windows 10 / 11
+- .NET SDK 10.0（`dotnet --version` → `10.0.x`）——没有的话 `run.cmd` 会自动装
 
 ## 构建、运行、测试
 
