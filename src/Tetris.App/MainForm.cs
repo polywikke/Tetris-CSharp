@@ -35,6 +35,12 @@ public sealed class MainForm : Form
     /// <summary>下落速度倍率（F4 循环）。1× 就是等级表原本的节奏。</summary>
     private static readonly double[] Speeds = { 0.5, 1.0, 2.0 };
 
+    /// <summary>AI 分步档：相邻两条指令的间隔（毫秒）。</summary>
+    private const double AiStepMs = 110;
+
+    /// <summary>AI 分步档：硬降落块后的停顿，让人看清它落在哪、消没消行。</summary>
+    private const double AiPiecePauseMs = 140;
+
     private readonly IGameEngine _engine = AppBootstrap.CreateEngine(Environment.TickCount);
     private readonly IHighScoreStore _store = AppBootstrap.CreateStore();
     private readonly BoardView _board = new();
@@ -47,6 +53,7 @@ public sealed class MainForm : Form
     private Label _levelLabel = null!;
     private Label _linesLabel = null!;
     private Label _speedLabel = null!;
+    private Label _aiPaceLabel = null!;
     private Label _nextLabel = null!;
     private Label _hintLabel = null!;
     private Label _aiLabel = null!;
@@ -58,6 +65,9 @@ public sealed class MainForm : Form
     private double _pendingMs;
     private int _speedIndex = 1;
     private long _lastSignature = -1;
+    private bool _aiFast;
+    private double _aiElapsedMs;
+    private double _aiPauseLeftMs;
     private bool _savedThisRound;
     private bool _newRecordThisRound;
     private IPlayerAgent? _agent;
@@ -104,6 +114,12 @@ public sealed class MainForm : Form
         if (key == Keys.F4)
         {
             CycleSpeed();
+            return true;
+        }
+
+        if (key == Keys.F5)
+        {
+            ToggleAiPace();
             return true;
         }
 
@@ -158,6 +174,8 @@ public sealed class MainForm : Form
         _newRecordThisRound = false;
         _pendingMs = 0;
         _lastSignature = -1;
+        _aiElapsedMs = 0;
+        _aiPauseLeftMs = 0;
         _lastTick = _clock.Elapsed;
         UpdateHud();
         _board.Invalidate();
@@ -174,7 +192,7 @@ public sealed class MainForm : Form
         _pendingMs += deltaMs * Speeds[_speedIndex];
 
         // 顺序固定：先吃输入，再推进逻辑帧，最后结算/重绘。
-        FeedInput(nowMs);
+        FeedInput(deltaMs);
 
         var steps = 0;
         while (_pendingMs >= FrameMs && steps < MaxCatchUpFrames)
@@ -243,8 +261,13 @@ public sealed class MainForm : Form
     /// <summary>
     /// 把这一帧的意图喂给引擎：玩家来自 <see cref="KeyRepeater"/>，AI 来自 <see cref="IPlayerAgent"/>。
     /// 暂停 / 结束 / 失焦时不积累按键，恢复后不会"瞬移一串"。
+    /// <para>
+    /// AI 在<b>分步档</b>下每 <see cref="AiStepMs"/> 毫秒才发一条指令，硬降落块后再停
+    /// <see cref="AiPiecePauseMs"/> 毫秒——这样才能看清"旋转 → 平移 → 落点"。
+    /// 极速档（F5）间隔为 0，退回"每帧一条"的原行为。
+    /// </para>
     /// </summary>
-    private void FeedInput(double nowMs)
+    private void FeedInput(double deltaMs)
     {
         if (_engine.State.Status != GameStatus.Running)
         {
@@ -254,7 +277,7 @@ public sealed class MainForm : Form
 
         if (_agent is null)
         {
-            foreach (var command in _keys.Collect(nowMs))
+            foreach (var command in _keys.Collect(NowMs()))
             {
                 _engine.Apply(command);
             }
@@ -265,15 +288,46 @@ public sealed class MainForm : Form
         // AI 接管期间：玩家的移动/旋转/硬降一律不生效（暂停键已在 ProcessCmdKey 里单独放行）。
         _keys.Clear();
 
+        if (_aiPauseLeftMs > 0)
+        {
+            _aiPauseLeftMs -= deltaMs;
+            return;
+        }
+
+        _aiElapsedMs += deltaMs;
+        if (_aiElapsedMs < (_aiFast ? 0 : AiStepMs))
+        {
+            return;
+        }
+
+        _aiElapsedMs = 0;
+
         try
         {
-            _engine.Apply(_agent.NextCommand(_engine.State));
+            var command = _agent.NextCommand(_engine.State);
+            if (_engine.Apply(command) && command == GameCommand.HardDrop)
+            {
+                // 落块后停一拍，让玩家看清落点和消行。
+                _aiPauseLeftMs = _aiFast ? 0 : AiPiecePauseMs;
+            }
         }
         catch (Exception)
         {
             // AI 契约上不抛异常；真抛了也只能把控制权还给玩家，不能让界面崩掉。
             TurnAgentOff("AI 异常，已切回玩家");
         }
+    }
+
+    /// <summary>F5：AI 观战节奏在"分步"和"极速"之间切换。</summary>
+    private void ToggleAiPace()
+    {
+        _aiFast = !_aiFast;
+        _aiElapsedMs = 0;
+        _aiPauseLeftMs = 0;
+        _lastSignature = -1;
+        _noticeLabel.Text = _aiFast ? "AI 极速（F5 改分步）" : "AI 分步（F5 改极速）";
+        UpdateHud();
+        _board.Invalidate();
     }
 
     /// <summary>一次性命令（旋转 / 硬降 / 暂停）与 AI 开关的公共入口。</summary>
@@ -373,6 +427,7 @@ public sealed class MainForm : Form
         _levelLabel.Text = $"等级  {state.Level}";
         _linesLabel.Text = $"消行  {state.LinesCleared}";
         _speedLabel.Text = $"速度  {Speeds[_speedIndex]:0.0}×（F4）";
+        _aiPaceLabel.Text = _aiFast ? "AI 节奏  极速（F5）" : "AI 节奏  分步（F5）";
 
         // 预览用图形控件，不再拼文字；队列不够长时对应那格留空。
         var preview = state.PeekNext(_previews.Length);
@@ -472,13 +527,14 @@ public sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 10,
+            RowCount = 11,
             BackColor = Palette.Background,
             Padding = new Padding(4, 14, 12, 10),
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
 
-        // 行高：四个数字 44/36/30/30，速度 26，"下一个"标题 22，预览区 74，提示占满剩余，AI 40，通知 34。
+        // 行高：四个数字 44/36/30/30，速度 26，"下一个"标题 22，预览区 74，
+        // 提示占满剩余，AI 统计 40，AI 节奏 26，通知 34。
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44f));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 36f));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 30f));
@@ -488,6 +544,7 @@ public sealed class MainForm : Form
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 74f));
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f));
+        panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 26f));
         panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34f));
 
         _scoreLabel = CreateLabel("分数  0x0", 14f, Palette.Accent, FontStyle.Bold);
@@ -497,13 +554,15 @@ public sealed class MainForm : Form
         _speedLabel = CreateLabel("速度  1.0×（F4）", 10f, Palette.Muted, FontStyle.Regular);
         _nextLabel = CreateLabel("下一个", 10f, Palette.Muted, FontStyle.Regular);
         _hintLabel = CreateLabel(
-            "← →  左右移动\n↑ / X  顺时针\nZ  逆时针\n↓  软降    空格  硬降\nP / Esc  暂停\nF2  重新开始\nF3  AI 观战 / 接管\nF4  下落速度",
+            "← →  左右移动\n↑ / X  顺时针\nZ  逆时针\n↓  软降    空格  硬降\nP / Esc  暂停\nF2  重新开始\nF3  AI 观战 / 接管\nF4  下落速度    F5  AI 节奏",
             9.5f,
             Palette.Muted,
             FontStyle.Regular);
         _hintLabel.TextAlign = ContentAlignment.TopLeft;
         _aiLabel = CreateLabel("AI  关闭（F3 观战）", 8.5f, Palette.Muted, FontStyle.Regular);
         _aiLabel.TextAlign = ContentAlignment.TopLeft;
+        _aiPaceLabel = CreateLabel("AI 节奏  分步（F5）", 8.5f, Palette.Muted, FontStyle.Regular);
+        _aiPaceLabel.TextAlign = ContentAlignment.TopLeft;
         _noticeLabel = CreateLabel(string.Empty, 8.5f, Palette.Muted, FontStyle.Regular);
         _noticeLabel.TextAlign = ContentAlignment.TopLeft;
 
@@ -516,7 +575,8 @@ public sealed class MainForm : Form
         panel.Controls.Add(BuildPreviewRow(), 0, 6);
         panel.Controls.Add(_hintLabel, 0, 7);
         panel.Controls.Add(_aiLabel, 0, 8);
-        panel.Controls.Add(_noticeLabel, 0, 9);
+        panel.Controls.Add(_aiPaceLabel, 0, 9);
+        panel.Controls.Add(_noticeLabel, 0, 10);
         return panel;
     }
 
