@@ -188,9 +188,12 @@ internal sealed class BoardView : Control
         }
     }
 
+    /// <summary>最多同时画几条"落选"的候选轮廓；选中那个另外画。</summary>
+    private const int MaxCandidateOutlines = 6;
+
     /// <summary>
-    /// 画 AI 候选热力图。候选是"落点"（4×4 盒左上角 + 旋转态），每个格子画一个半透明色块；
-    /// 颜色只取决于候选之间的相对高低（同一帧内归一化），因此换一块方块也能看出"哪几个明显更好"。
+    /// 画 AI 的落点提示。候选有几十个，全部填色会把棋盘糊成一片，所以分两层：
+    /// 选中落点画实心 + 强调外框；其余只取评分最高的几个，画一圈很淡的轮廓。
     /// </summary>
     private void DrawAiCandidates(Graphics g, float originX, float originY, float cell, GameState state)
     {
@@ -224,15 +227,21 @@ internal sealed class BoardView : Control
         var span = max - min;
         var chosen = debug.Chosen;
 
-        // 先画落选的（半透明），最后画选中的，保证高亮那一个总在最上层。
-        foreach (var candidate in candidates)
+        var outlines = 0;
+        foreach (var candidate in candidates.OrderByDescending(c => c.Score))
         {
             if (chosen is not null && candidate.Equals(chosen))
             {
                 continue;
             }
 
+            if (outlines >= MaxCandidateOutlines)
+            {
+                break;
+            }
+
             DrawCandidate(g, originX, originY, cell, state, candidate, Normalize(candidate, min, span), false);
+            outlines++;
         }
 
         if (chosen is not null)
@@ -269,13 +278,17 @@ internal sealed class BoardView : Control
 
         // 红(低分) → 绿(高分)：两段线性插值，中间自然过渡成偏黄。
         var color = Mix(HeatLow, HeatHigh, quality);
-        var fillAlpha = highlight ? 110 : 58;
-        var edgeAlpha = highlight ? 240 : 110;
 
-        using var fill = new SolidBrush(Color.FromArgb(fillAlpha, color));
+        // 选中的画实心 + 粗边；落选的只留一圈很淡的轮廓，不填色。
+        using var fill = highlight ? new SolidBrush(Color.FromArgb(120, color)) : null;
         using var edge = new Pen(
-            Color.FromArgb(edgeAlpha, color),
+            Color.FromArgb(highlight ? 240 : 80, color),
             highlight ? Math.Max(2f, cell * 0.12f) : 1f);
+
+        var left = float.MaxValue;
+        var top = float.MaxValue;
+        var right = float.MinValue;
+        var bottom = float.MinValue;
 
         foreach (var part in shape.CellsAt(candidate.Rotation))
         {
@@ -292,34 +305,27 @@ internal sealed class BoardView : Control
                 Math.Max(1f, cell - 3f),
                 Math.Max(1f, cell - 3f));
 
-            g.FillRectangle(fill, rect);
+            if (fill is not null)
+            {
+                g.FillRectangle(fill, rect);
+            }
+
             g.DrawRectangle(edge, rect.X, rect.Y, rect.Width, rect.Height);
+
+            left = Math.Min(left, rect.X);
+            top = Math.Min(top, rect.Y);
+            right = Math.Max(right, rect.Right);
+            bottom = Math.Max(bottom, rect.Bottom);
         }
 
-        if (!highlight)
+        if (!highlight || right <= left)
         {
             return;
         }
 
-        // 选中落点再套一圈强调色描边，缩到小窗口也一眼能找到。
-        using var chosenPen = new Pen(Palette.Accent, Math.Max(2f, cell * 0.14f));
-        foreach (var part in shape.CellsAt(candidate.Rotation))
-        {
-            var x = candidate.X + part.X;
-            var y = candidate.Y + part.Y;
-            if (x < 0 || x >= state.Width || y < 0 || y >= state.Height)
-            {
-                continue;
-            }
-
-            var rect = new RectangleF(
-                originX + x * cell + 0.75f,
-                originY + y * cell + 0.75f,
-                Math.Max(1f, cell - 1.5f),
-                Math.Max(1f, cell - 1.5f));
-
-            g.DrawRectangle(chosenPen, rect.X, rect.Y, rect.Width, rect.Height);
-        }
+        // 选中的落点再套一个整体外框：方块形状再花，也能一眼定位"它要落哪"。
+        using var boxPen = new Pen(Palette.Accent, Math.Max(2f, cell * 0.14f));
+        g.DrawRectangle(boxPen, left - 2f, top - 2f, right - left + 4f, bottom - top + 4f);
     }
 
     /// <summary>两个颜色按 0..1 混合（quality = 0 取 <paramref name="from"/>）。</summary>
