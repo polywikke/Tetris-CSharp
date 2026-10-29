@@ -35,7 +35,7 @@ dotnet publish src/Tetris.App -c Release -r win-x64 --self-contained false -o pu
 | 空格 | 硬降 |
 | P / Esc | 暂停 / 继续 |
 | F2 | 重新开始 |
-| F3 | AI 观战 / 玩家接管（B 接线后才生效，见 [04 接线单](docs/04-B接线单.md)） |
+| F3 | AI 观战 / 玩家接管（同一棋盘轮流控制） |
 
 分数以十六进制显示；最高分保存在 `%AppData%\TetrisCourse\highscore.xml`。
 
@@ -82,7 +82,7 @@ docs/                    任务书与集成说明
 |---|---|
 | `Tetris.Core` 规则 + 引擎 | ✅ 完成（20 + 18 个用例覆盖） |
 | `Tetris.AI` 启发式玩家 | ✅ 完成（单元 + AI×真引擎集成用例） |
-| `Tetris.Persistence` 高分存档 | ⚠️ 基本可用；只读目录、文件被占用等异常场景待 B 补完 |
-| `Tetris.App` 界面 | ⚠️ 仍接 `DemoEngine`：能移动旋转，但不消行、不计分、不出新块，F3 无反应 |
+| `Tetris.Persistence` 高分存档 | ✅ 完成（缺失/损坏/只读/占用都有处理） |
+| `Tetris.App` 界面 | ✅ 已接真引擎：DAS 连发、F3 观战、AI 热力图、下一个方块预览 |
 
-**还差最后一步**：B 按 [04 接线单](docs/04-B接线单.md) 改三处（`csproj` 加引用、`AppBootstrap` 换真引擎、`MainForm` 加 F3），整局就是真的了。
+整局可玩：`dotnet run --project src/Tetris.App`。交接时的状态与验收清单见 [04 接线单](docs/04-B接线单.md)。
