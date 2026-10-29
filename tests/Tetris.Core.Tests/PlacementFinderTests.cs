@@ -139,16 +139,16 @@ public class PlacementFinderTests
     }
 
     [Fact]
-    public void ForO_OnEmptyBoard_ShouldOfferTenColumnsPerRotation()
+    public void ForO_OnEmptyBoard_ShouldOfferElevenColumnsPerRotation()
     {
         var finder = new PlacementFinder(new FakeGameRules(), useLookahead: false);
         var state = NewState(PieceKind.O);
 
         var result = finder.FindBest(state);
 
-        // O 的 4 个旋转态完全相同；盒子有 4 列，O 只占中间两列 → 12 - 2 = 10 个可放列。
-        Assert.Equal(40, result.Candidates.Count);
-        Assert.Equal(10, result.Candidates.Count(c => c.Rotation == 0));
+        // O 占盒内 x=1、2，盒子左列最左可到 -1（占棋盘第 0、1 列）→ 每旋转态 11 个列位。
+        Assert.Equal(44, result.Candidates.Count);
+        Assert.Equal(11, result.Candidates.Count(c => c.Rotation == 0));
     }
 
     [Fact]

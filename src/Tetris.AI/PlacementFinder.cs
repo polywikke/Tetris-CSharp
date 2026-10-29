@@ -168,7 +168,9 @@ public sealed class PlacementFinder
                 continue;
             }
 
-            for (var x = 0; x < state.Width; x++)
+            // 包围盒左列可以为负：越界与否由 Collides 按实际占用格判断。
+            // 从 0 起会漏掉贴左墙的落点（例如竖放 I 永远进不了第 0、1 列）。
+            for (var x = -(PieceShape.BoxSize - 1); x < state.Width; x++)
             {
                 var placed = rotated.With(x: x);
                 if (_rules.Collides(state, placed))
