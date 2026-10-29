@@ -19,4 +19,10 @@ internal static class KeyMap
         Keys.Enter => GameCommand.Resume,
         _ => null,
     };
+
+    /// <summary>
+    /// 是否交给 <see cref="Input.KeyRepeater"/> 做 DAS/ARR 连发（方向键 + 软降）。
+    /// 其余（旋转、硬降、暂停）都是<b>一次性</b>命令：按下当帧执行一次，按住不连发。
+    /// </summary>
+    public static bool IsAutoRepeat(Keys key) => key is Keys.Left or Keys.Right or Keys.Down;
 }
