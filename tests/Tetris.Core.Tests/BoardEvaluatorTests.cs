@@ -4,7 +4,7 @@ using Tetris.Core;
 namespace Tetris.Core.Tests;
 
 /// <summary>
-/// 评估函数测试：四项指标的口径必须和 docs/03-C-AI与测试.md §3.1 一致，
+/// 评估函数测试：四项指标的口径必须和 docs/设计说明.md §4.1 一致，
 /// 否则 AI 的行为会随实现漂移而无法解释。
 /// </summary>
 public class BoardEvaluatorTests

@@ -8,7 +8,7 @@ namespace Tetris.Persistence;
 /// 高分存档的 XML 实现（B 负责）。契约：<see cref="Load"/> 与 <see cref="Save"/> <b>永不抛异常</b>，
 /// 所有失败都翻译成 <see cref="HighScoreLoadStatus"/> 或 <c>false</c>，界面因此永远不需要 try/catch。
 /// <para>
-/// 覆盖任务书 02 §六 的四个盲测场景：
+/// 覆盖四个常见的存档异常场景：
 /// <list type="number">
 /// <item>文件不存在 → <see cref="HighScoreLoadStatus.Missing"/>，界面按"首次运行、0 分"正常开局；</item>
 /// <item>文件里是乱码 / 根节点不对 / 负数 → <see cref="HighScoreLoadStatus.Corrupted"/>，忽略旧档；</item>
