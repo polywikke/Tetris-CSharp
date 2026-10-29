@@ -35,7 +35,7 @@ dotnet publish src/Tetris.App -c Release -r win-x64 --self-contained false -o pu
 | 空格 | 硬降 |
 | P / Esc | 暂停 / 继续 |
 | F2 | 重新开始 |
-| F3 | AI 观战 / 玩家接管（AI 侧已就绪，界面接线由 B 完成） |
+| F3 | AI 观战 / 玩家接管（B 接线后才生效，见 [04 接线单](docs/04-B接线单.md)） |
 
 分数以十六进制显示；最高分保存在 `%AppData%\TetrisCourse\highscore.xml`。
 
@@ -53,7 +53,7 @@ var command = agent.NextCommand(state);                // 每逻辑帧一条指�
 - **指令状态机**（`HeuristicAgent`）：旋转 → 平移 → 硬降；带旋转放弃、单块 120 帧超时、计划不可达三路兜底，保证不会卡死。
 - **决策可视化**（`IPlayerAgentDebug`）：`Candidates` / `Chosen` 供界面画候选热力图（F3 接线由 B 完成）。
 
-12×16 棋盘、7-bag 随机出块、10 局实测：平均 1970 分 / 19.7 行（纯 1-ply 为 1420 分 / 14.2 行），单次决策平均 0.17ms，远低于 8ms 帧预算。数据与调参记录见 [docs/03](docs/03-C-AI与测试.md) 第八节。
+12×16 棋盘、7-bag 出块、真引擎上跑 10 个种子（单局上限 10000 帧）：平均 **68730 分 / 687 行**，10 局全部未被顶死；单次决策平均 0.38ms、P99 4.66ms，仍在 8ms 帧预算内。纯 1-ply 为 59330 分，且 10 局里有 3 局顶死。数据与调参记录见 [docs/03](docs/03-C-AI与测试.md) 第八节。
 
 ## 文档
 
@@ -63,6 +63,7 @@ var command = agent.NextCommand(state);                // 每逻辑帧一条指�
 | [01 A：核心引擎](docs/01-A-核心引擎.md) | A |
 | [02 B：界面与存档](docs/02-B-界面与存档.md) | B |
 | [03 C：AI 与测试](docs/03-C-AI与测试.md) | C |
+| [04 B 接线单](docs/04-B接线单.md) | B（一页纸：改哪三处、怎么验收） |
 
 ## 目录
 
@@ -77,5 +78,11 @@ docs/                    任务书与集成说明
 
 ## 当前状态
 
-骨架阶段：界面已能运行，接的是 `DemoEngine`（假引擎）。
-A 交付 `GameEngine` 后，改 `src/Tetris.App/AppBootstrap.cs` 一处即可切换到真实引擎。
+| 模块 | 状态 |
+|---|---|
+| `Tetris.Core` 规则 + 引擎 | ✅ 完成（20 + 18 个用例覆盖） |
+| `Tetris.AI` 启发式玩家 | ✅ 完成（单元 + AI×真引擎集成用例） |
+| `Tetris.Persistence` 高分存档 | ⚠️ 基本可用；只读目录、文件被占用等异常场景待 B 补完 |
+| `Tetris.App` 界面 | ⚠️ 仍接 `DemoEngine`：能移动旋转，但不消行、不计分、不出新块，F3 无反应 |
+
+**还差最后一步**：B 按 [04 接线单](docs/04-B接线单.md) 改三处（`csproj` 加引用、`AppBootstrap` 换真引擎、`MainForm` 加 F3），整局就是真的了。
