@@ -41,6 +41,12 @@ public sealed class MainForm : Form
     /// <summary>AI 分步档：硬降落块后的停顿，让人看清它落在哪、消没消行。</summary>
     private const double AiPiecePauseMs = 140;
 
+    /// <summary>
+    /// AI 分步档冻结重力后，如果同一块超过这个时间没有一条成功指令，就替它硬降——
+    /// 否则 AI 一旦原地打转，画面会彻底停住。
+    /// </summary>
+    private const double AiStallLimitMs = 2500;
+
     private readonly IGameEngine _engine = AppBootstrap.CreateEngine(Environment.TickCount);
     private readonly IHighScoreStore _store = AppBootstrap.CreateStore();
     private readonly BoardView _board = new();
@@ -68,6 +74,7 @@ public sealed class MainForm : Form
     private bool _aiFast;
     private double _aiElapsedMs;
     private double _aiPauseLeftMs;
+    private double _aiStallMs;
     private bool _savedThisRound;
     private bool _newRecordThisRound;
     private IPlayerAgent? _agent;
@@ -176,6 +183,7 @@ public sealed class MainForm : Form
         _lastSignature = -1;
         _aiElapsedMs = 0;
         _aiPauseLeftMs = 0;
+        _aiStallMs = 0;
         _lastTick = _clock.Elapsed;
         UpdateHud();
         _board.Invalidate();
@@ -188,23 +196,37 @@ public sealed class MainForm : Form
         var deltaMs = nowMs - _lastTick.TotalMilliseconds;
         _lastTick = now;
 
-        // 速度倍率只缩放"逻辑时间"，不影响按键响应。
-        _pendingMs += deltaMs * Speeds[_speedIndex];
+        // AI 分步档冻结重力：方块只随 AI 指令移动。
+        // 否则高等级下重力（最快 50ms/格）会跑在 110ms 一步的 AI 前面，
+        // 方块在指令没发完时就被锁定在错误列——这就是"切到分步就很快顶死"的原因。
+        var aiSlow = _agent is not null && !_aiFast;
+        if (aiSlow)
+        {
+            _pendingMs = 0;
+        }
+        else
+        {
+            // 速度倍率只缩放"逻辑时间"，不影响按键响应。
+            _pendingMs += deltaMs * Speeds[_speedIndex];
+        }
 
         // 顺序固定：先吃输入，再推进逻辑帧，最后结算/重绘。
         FeedInput(deltaMs);
 
-        var steps = 0;
-        while (_pendingMs >= FrameMs && steps < MaxCatchUpFrames)
+        if (!aiSlow)
         {
-            _engine.Tick();
-            _pendingMs -= FrameMs;
-            steps++;
-        }
+            var steps = 0;
+            while (_pendingMs >= FrameMs && steps < MaxCatchUpFrames)
+            {
+                _engine.Tick();
+                _pendingMs -= FrameMs;
+                steps++;
+            }
 
-        if (steps >= MaxCatchUpFrames)
-        {
-            _pendingMs = 0;
+            if (steps >= MaxCatchUpFrames)
+            {
+                _pendingMs = 0;
+            }
         }
 
         SaveHighScoreIfNeeded();
@@ -288,6 +310,20 @@ public sealed class MainForm : Form
         // AI 接管期间：玩家的移动/旋转/硬降一律不生效（暂停键已在 ProcessCmdKey 里单独放行）。
         _keys.Clear();
 
+        if (!_aiFast)
+        {
+            // 分步档没有重力兜底，AI 若一直发不出有效指令就会冻在画面上：超时替它砸下去。
+            _aiStallMs += deltaMs;
+            if (_aiStallMs >= AiStallLimitMs)
+            {
+                _engine.Apply(GameCommand.HardDrop);
+                _aiStallMs = 0;
+                _aiElapsedMs = 0;
+                _aiPauseLeftMs = AiPiecePauseMs;
+                return;
+            }
+        }
+
         if (_aiPauseLeftMs > 0)
         {
             _aiPauseLeftMs -= deltaMs;
@@ -305,10 +341,15 @@ public sealed class MainForm : Form
         try
         {
             var command = _agent.NextCommand(_engine.State);
-            if (_engine.Apply(command) && command == GameCommand.HardDrop)
+            if (_engine.Apply(command))
             {
-                // 落块后停一拍，让玩家看清落点和消行。
-                _aiPauseLeftMs = _aiFast ? 0 : AiPiecePauseMs;
+                _aiStallMs = 0;
+
+                if (command == GameCommand.HardDrop)
+                {
+                    // 落块后停一拍，让玩家看清落点和消行。
+                    _aiPauseLeftMs = _aiFast ? 0 : AiPiecePauseMs;
+                }
             }
         }
         catch (Exception)
@@ -324,6 +365,11 @@ public sealed class MainForm : Form
         _aiFast = !_aiFast;
         _aiElapsedMs = 0;
         _aiPauseLeftMs = 0;
+        _aiStallMs = 0;
+
+        // 半路换档时丢掉旧计划：分步档下计划是按"重力冻结"算的，沿用会把方块送到错误位置。
+        _agent?.Reset();
+
         _lastSignature = -1;
         _noticeLabel.Text = _aiFast ? "AI 极速（F5 改分步）" : "AI 分步（F5 改极速）";
         UpdateHud();
@@ -366,6 +412,9 @@ public sealed class MainForm : Form
 
         _agent = new HeuristicAgent(_engine.State.Config, AppBootstrap.CreateRules());
         _agent.Reset();
+        _aiElapsedMs = 0;
+        _aiPauseLeftMs = 0;
+        _aiStallMs = 0;
         _board.ShowAiOverlay = true;
         _board.AiDebug = _agent as IPlayerAgentDebug;
         _noticeLabel.Text = "AI 接管（F3 交回玩家）";
