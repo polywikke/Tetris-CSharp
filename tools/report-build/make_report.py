@@ -343,9 +343,9 @@ def build_cover(doc):
             header=["学号", "姓名", "分工", "贡献比"],
             widths=[3.0, 2.4, 8.4, 2.0],
             rows=[
-                ["21240414", "肖佳华", "组长。核心规则与引擎（Tetris.Core）、发布与集成、报告数据实测", "40%"],
-                ["21240415", "刘潇然", "启发式 AI（评估 / 落点搜索 / 指令状态机）与对应单元测试", "28%"],
-                ["21240416", "孙航", "WinForms 界面、输入（DAS/ARR）、XML 存档与异常处理", "32%"],
+                ["21240414", "肖佳华", "组长。核心规则与引擎（Tetris.Core）、发布与集成、报告数据实测", "35%"],
+                ["21240415", "刘潇然", "启发式 AI（评估 / 落点搜索 / 指令状态机）与对应单元测试", "30%"],
+                ["21240416", "孙航", "WinForms 界面、输入（DAS/ARR）、XML 存档与异常处理", "35%"],
             ],
         ),
         font_size=10,
@@ -353,7 +353,7 @@ def build_cover(doc):
 
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    set_run_font(p.add_run("（三人贡献比不同，合计 100%）"), BODY_FONT, 9, False, GREY)
+    set_run_font(p.add_run("（三人贡献比合计 100%）"), BODY_FONT, 9, False, GREY)
     p.paragraph_format.space_before = Pt(8)
     p.paragraph_format.space_after = Pt(34)
 
