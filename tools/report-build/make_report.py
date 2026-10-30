@@ -55,7 +55,7 @@ TABLES = {
     "t32": dict(
         cap="表 3-2　五个接口契约",
         header=["接口", "实现", "调用方", "职责"],
-        widths=[3.4, 4.0, 3.4, 5.2],
+        widths=[3.4, 3.8, 3.4, 5.2],
         rows=[
             ["IGameRules", "StandardGameRules", "引擎、AI、测试", "碰撞、下落距离、移动、旋转踢墙、锁定消行"],
             ["IGameEngine", "GameEngine", "界面", "开局、接受命令、推进一帧、读状态"],
@@ -80,7 +80,7 @@ TABLES = {
     "t42": dict(
         cap="表 4-2　核心性能数据",
         header=["指标", "数值", "测量方式"],
-        widths=[6.2, 5.6, 6.2],
+        widths=[5.6, 5.4, 4.8],
         rows=[
             ["逻辑帧耗时（纯重力）", "0.44 µs / 帧", "20 局共 69041 帧，Stopwatch 计时"],
             ["逻辑帧耗时（含命令）", "2.00 µs / 帧", "20 局，每帧一条命令 + 一次 Tick"],
@@ -93,7 +93,7 @@ TABLES = {
     "t43": dict(
         cap="表 4-3　AI 在真引擎上的长跑成绩",
         header=["配置", "平均分", "平均消行", "平均存活帧", "顶死局数"],
-        widths=[3.8, 3.4, 3.4, 4.4, 2.8],
+        widths=[3.6, 3.0, 3.0, 3.4, 2.8],
         rows=[
             ["1-ply", "59330", "593.3", "8713", "3 / 10"],
             ["2-ply（默认）", "68730", "687.3", "10000（上限）", "0 / 10"],
@@ -102,10 +102,10 @@ TABLES = {
     "ta1": dict(
         cap="表 A-1　AI 使用情况明细",
         header=["工具", "使用位置", "采纳情况", "被否决 / 修改的内容"],
-        widths=[2.6, 5.4, 3.2, 5.6],
+        widths=[2.4, 5.0, 3.0, 5.4],
         rows=[
             ["DeepSeek", "接口草案、注释、任务书结构", "部分采纳", "过度抽象（容器、IRenderer）被去掉"],
-            ["DeepSeek", "计分规则与等级曲线建议", "否决", "带等级倍率与硬降奖励，偏离 100×k 需求"],
+            ["DeepSeek", "计分与等级曲线初稿", "修改", "初稿带等级倍率与硬降奖励，改为严格 100×k"],
             ["Claude", "WinForms 布局与自绘样板代码", "采纳后重构", "布局改为 TableLayoutPanel 两栏"],
             ["Claude", "2-ply 落点加权方案", "否决", "全量加权导致 380 帧顶死，改为并列最优裁决"],
             ["Claude", "测试用例边界清单", "采纳", "逐条改写为可直接运行的 xUnit 用例"],
@@ -234,6 +234,12 @@ def table(doc, spec, font_size=9.5):
     t = doc.add_table(rows=1, cols=len(spec["header"]))
     t.style = "Table Grid"
     t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t.autofit = False
+    layout = OxmlElement("w:tblLayout")
+    layout.set(qn("w:type"), "fixed")
+    t._tbl.tblPr.append(layout)
+    for i, w in enumerate(spec["widths"]):
+        t.columns[i].width = Cm(w)
     for i, h in enumerate(spec["header"]):
         cell = t.rows[0].cells[i]
         cell.text = ""
@@ -335,7 +341,7 @@ def build_cover(doc):
         doc,
         dict(
             header=["学号", "姓名", "分工", "贡献比"],
-            widths=[3.2, 2.6, 8.4, 2.0],
+            widths=[3.0, 2.4, 8.4, 2.0],
             rows=[
                 ["【学号 1】", "【姓名 1】", "组长。核心规则与引擎（Tetris.Core）、发布与集成、报告数据实测", "40%"],
                 ["【学号 2】", "【姓名 2】", "WinForms 界面、输入（DAS/ARR）、XML 存档与异常处理", "32%"],
