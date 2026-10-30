@@ -92,11 +92,12 @@ internal sealed class KeyRepeater
         // 退到排队的那一个不立刻发命令、也不重走一整套 DAS：
         // 它的下一次机会是 ArrMs 之后，这样"点一下反方向再松手"不会卡顿 180ms，
         // 也不会因为两个键交替按而跑出双倍速度（任何时候一帧最多一条横向命令）。
-        if (key is Keys.Left or Keys.Right)
+        // 这里同样按"映射后的命令"判断，左右互换时不至于把互斥逻辑搞反。
+        if (IsHorizontal(key))
         {
             foreach (var hold in _holds)
             {
-                if (hold.Key is Keys.Left or Keys.Right)
+                if (IsHorizontal(hold.Key))
                 {
                     hold.Fired = true;
                     hold.DasEndAt = nowMs + DasMs;
@@ -141,13 +142,17 @@ internal sealed class KeyRepeater
         return commands;
     }
 
-    /// <summary>横向只能有一条：最后按下的那个方向赢。</summary>
+    /// <summary>该键按 <see cref="KeyMap"/> 映射后是不是横向移动（左右互换会跟着走）。</summary>
+    private static bool IsHorizontal(Keys key) =>
+        KeyMap.ToCommand(key) is GameCommand.MoveLeft or GameCommand.MoveRight;
+
+    /// <summary>横向只能有一条：最后按下的那个方向赢。发什么命令<b>问 KeyMap</b>，不在这里写死左右。</summary>
     private void EmitHorizontal(double nowMs, List<GameCommand> commands)
     {
         Hold? active = null;
         foreach (var hold in _holds)
         {
-            if (hold.Key is not (Keys.Left or Keys.Right))
+            if (!IsHorizontal(hold.Key))
             {
                 continue;
             }
@@ -163,7 +168,12 @@ internal sealed class KeyRepeater
             return;
         }
 
-        commands.Add(active.Key == Keys.Left ? GameCommand.MoveLeft : GameCommand.MoveRight);
+        if (KeyMap.ToCommand(active.Key) is not { } command)
+        {
+            return;
+        }
+
+        commands.Add(command);
         Advance(active, nowMs);
     }
 
@@ -172,7 +182,7 @@ internal sealed class KeyRepeater
     {
         foreach (var hold in _holds)
         {
-            if (hold.Key != Keys.Down)
+            if (KeyMap.ToCommand(hold.Key) != GameCommand.SoftDrop)
             {
                 continue;
             }

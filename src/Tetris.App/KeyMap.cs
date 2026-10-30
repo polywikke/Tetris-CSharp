@@ -21,8 +21,13 @@ internal static class KeyMap
     };
 
     /// <summary>
-    /// 是否交给 <see cref="Input.KeyRepeater"/> 做 DAS/ARR 连发（方向键 + 软降）。
+    /// 是否交给 <see cref="Input.KeyRepeater"/> 做 DAS/ARR 连发（横向移动 + 软降）。
     /// 其余（旋转、硬降、暂停）都是<b>一次性</b>命令：按下当帧执行一次，按住不连发。
+    /// <para>
+    /// 判断依据是<b>映射后的命令</b>而不是物理键：左右互换、或把移动改到 A/D，
+    /// 连发行为都会自动跟着走，不需要再改这里。
+    /// </para>
     /// </summary>
-    public static bool IsAutoRepeat(Keys key) => key is Keys.Left or Keys.Right or Keys.Down;
+    public static bool IsAutoRepeat(Keys key) => ToCommand(key) is
+        GameCommand.MoveLeft or GameCommand.MoveRight or GameCommand.SoftDrop;
 }
