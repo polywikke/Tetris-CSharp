@@ -1,4 +1,4 @@
-## .NET 构建产物
+﻿## .NET 构建产物
 bin/
 obj/
 publish/
@@ -26,6 +26,3 @@ coverage*.json
 ## Python 报告生成脚本的缓存
 __pycache__/
 *.pyc
-
-## 提交材料压缩包（需要时在本机生成）
-提交材料/*.zip

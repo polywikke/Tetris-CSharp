@@ -5,7 +5,7 @@ import math
 import os
 from PIL import Image, ImageDraw, ImageFont
 
-OUT = r"C:\Users\17102\Desktop\C#程序设计\提交材料\figures"
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "figures")
 os.makedirs(OUT, exist_ok=True)
 
 FONT_REG = r"C:\Windows\Fonts\msyh.ttc"

@@ -15,7 +15,7 @@ from report_content import CHAPTERS
 
 ROOT = r"C:\Users\17102\Desktop\C#程序设计"
 OUT_DIR = os.path.join(ROOT, "提交材料")
-FIG = os.path.join(OUT_DIR, "figures")
+FIG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "figures")
 DOCX = os.path.join(OUT_DIR, "研究报告-俄罗斯方块.docx")
 
 BODY_FONT = "宋体"
