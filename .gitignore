@@ -22,3 +22,7 @@ coverage*.json
 ## 鏈満/涓存椂
 .tmp/
 *.log
+
+## Python 报告生成脚本的缓存
+__pycache__/
+*.pyc

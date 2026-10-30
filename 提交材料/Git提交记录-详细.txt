@@ -1,0 +1,404 @@
+﻿
+===== 0722c6f | 2026-10-30 11:20:46 +0800 | polywikke =====
+最终版本v2.0
+
+ src/Tetris.App/Input/KeyRepeater.cs | 22 ++++++++++++++++------
+ src/Tetris.App/KeyMap.cs            |  9 +++++++--
+ 2 files changed, 23 insertions(+), 8 deletions(-)
+
+
+===== 8e458ec | 2026-10-29 17:01:54 +0800 | polywikke =====
+feat: 增加一键启动脚本
+
+ README.md |  20 ++++++++-
+ run.cmd   |  16 +++++++
+ run.ps1   | 141 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ 3 files changed, 176 insertions(+), 1 deletion(-)
+
+
+===== a6dab88 | 2026-10-29 16:54:45 +0800 | polywikke =====
+最终版本v1.0
+
+
+===== 4bf520e | 2026-10-29 16:54:45 +0800 | polywikke =====
+merge: UI 速度档、AI 观战节奏与落点渲染
+
+
+===== 83924d4 | 2026-10-29 16:35:20 +0800 | polywikke =====
+fix(ai): 分步档冻结重力，落点不再被重力抢先锁定
+
+ README.md                  |  2 +-
+ src/Tetris.App/MainForm.cs | 77 +++++++++++++++++++++++++++++++++++++---------
+ 2 files changed, 64 insertions(+), 15 deletions(-)
+
+
+===== 96428a3 | 2026-10-29 16:21:11 +0800 | polywikke =====
+docs: 补充 F4/F5 与观战节奏说明
+
+ README.md | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+
+===== a176371 | 2026-10-29 16:20:57 +0800 | polywikke =====
+feat(ui): AI 落点渲染分层，选中落点独立强调
+
+ src/Tetris.App/BoardView.cs | 64 +++++++++++++++++++++++++--------------------
+ 1 file changed, 35 insertions(+), 29 deletions(-)
+
+
+===== 4ba318e | 2026-10-29 16:20:27 +0800 | polywikke =====
+feat(ai): 观战节奏改为分步/极速两档
+
+ src/Tetris.App/MainForm.cs | 76 +++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 68 insertions(+), 8 deletions(-)
+
+
+===== 1948129 | 2026-10-29 16:19:53 +0800 | polywikke =====
+feat(ui): 增加下落速度三档与重绘节流
+
+ src/Tetris.App/MainForm.cs | 84 ++++++++++++++++++++++++++++++++++++++++------
+ 1 file changed, 73 insertions(+), 11 deletions(-)
+
+
+===== 2ce9348 | 2026-10-29 16:18:31 +0800 | polywikke =====
+初始版本
+
+
+===== ebf14bd | 2026-10-29 14:49:27 +0800 | polywikke =====
+merge: 仓库清理与文档整合
+
+
+===== f05d1fc | 2026-10-29 14:49:26 +0800 | polywikke =====
+chore: 清理仓库并把任务书合并为设计说明
+
+ README.md                                          |  76 ++---
+ ...247\210\344\270\216\351\233\206\346\210\220.md" | 246 --------------
+ ...240\270\345\277\203\345\274\225\346\223\216.md" | 330 ------------------
+ ...235\242\344\270\216\345\255\230\346\241\243.md" | 308 -----------------
+ ...03-C-AI\344\270\216\346\265\213\350\257\225.md" | 371 ---------------------
+ "docs/04-B\346\216\245\347\272\277\345\215\225.md" |  89 -----
+ ...256\276\350\256\241\350\257\264\346\230\216.md" | 243 ++++++++++++++
+ src/Tetris.AI/BoardEvaluator.cs                    |   4 +-
+ src/Tetris.AI/HeuristicAgent.cs                    |   2 +-
+ src/Tetris.AI/PlacementFinder.cs                   |   2 +-
+ src/Tetris.App/AppBootstrap.cs                     |   2 +-
+ src/Tetris.App/MainForm.cs                         |   8 +-
+ src/Tetris.App/NextPieceView.cs                    |   2 +-
+ src/Tetris.Core/PieceKind.cs                       |   2 +-
+ src/Tetris.Persistence/XmlHighScoreStore.cs        |   2 +-
+ tests/Tetris.Core.Tests/BoardEvaluatorTests.cs     |   2 +-
+ 16 files changed, 292 insertions(+), 1397 deletions(-)
+
+
+===== 36ab37f | 2026-10-29 14:40:19 +0800 | polywikke =====
+docs: B 已接线，更新状态与目录
+
+ README.md                                                         | 8 ++++----
+ ...46\200\273\350\247\210\344\270\216\351\233\206\346\210\220.md" | 6 ++++--
+ "docs/04-B\346\216\245\347\272\277\345\215\225.md"                | 7 +++++--
+ 3 files changed, 13 insertions(+), 8 deletions(-)
+
+
+===== 8fa662d | 2026-10-29 14:39:33 +0800 | polywikke =====
+merge: B 界面接线与存档完善（DAS / F3 / AI 可视化 / 存档异常处理）
+
+
+===== 5e23943 | 2026-10-29 14:29:34 +0800 | polywikke =====
+merge: 记录旋转态偏移的主动取舍
+
+
+===== d27decc | 2026-10-29 14:29:34 +0800 | polywikke =====
+docs(core): 记录旋转态偏移的主动取舍
+
+ ...-A-\346\240\270\345\277\203\345\274\225\346\223\216.md" | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+
+===== fc19e33 | 2026-10-29 14:26:18 +0800 | polywikke =====
+merge: 文档同步与 B 接线单
+
+
+===== 841a137 | 2026-10-29 14:26:14 +0800 | polywikke =====
+docs: 修正 README 当前状态与 F3 说明
+
+ README.md | 15 +++++++++++----
+ 1 file changed, 11 insertions(+), 4 deletions(-)
+
+
+===== 6ef2a41 | 2026-10-29 14:25:56 +0800 | polywikke =====
+docs(b): 新增 B 接线单（三处改动 + 验收）
+
+ "docs/04-B\346\216\245\347\272\277\345\215\225.md" | 86 ++++++++++++++++++++++
+ 1 file changed, 86 insertions(+)
+
+
+===== c21de92 | 2026-10-29 14:25:47 +0800 | polywikke =====
+docs: 同步 A/C 交付状态与实测口径
+
+ ...3\350\247\210\344\270\216\351\233\206\346\210\220.md" | 16 ++++++++++++++--
+ "docs/03-C-AI\344\270\216\346\265\213\350\257\225.md"    |  9 +++++----
+ 2 files changed, 19 insertions(+), 6 deletions(-)
+
+
+===== acc1d60 | 2026-10-29 14:16:10 +0800 | sunhang =====
+finish ui and save
+
+ src/Tetris.App/AppBootstrap.cs              |  28 ++-
+ src/Tetris.App/BoardView.cs                 | 228 ++++++++++++++++++-
+ src/Tetris.App/Input/KeyRepeater.cs         | 210 ++++++++++++++++++
+ src/Tetris.App/KeyMap.cs                    |   6 +
+ src/Tetris.App/MainForm.cs                  | 330 ++++++++++++++++++++++++----
+ src/Tetris.App/NextPieceView.cs             | 112 ++++++++++
+ src/Tetris.App/Tetris.App.csproj            |   1 +
+ src/Tetris.Persistence/XmlHighScoreStore.cs |  65 +++++-
+ 8 files changed, 911 insertions(+), 69 deletions(-)
+
+
+===== 243f4ac | 2026-10-29 14:13:20 +0800 | polywikke =====
+merge: 修复 AI 落点枚举左侧盲区（+2 用例，真引擎基准）
+
+
+===== b767987 | 2026-10-29 14:13:04 +0800 | polywikke =====
+docs(ai): 用真引擎重测并更新基准数据
+
+ ...03-C-AI\344\270\216\346\265\213\350\257\225.md" | 28 +++++++++++++++++-----
+ 1 file changed, 22 insertions(+), 6 deletions(-)
+
+
+===== c10b990 | 2026-10-29 12:59:54 +0800 | polywikke =====
+test(ai): 补充落点几何的回归用例
+
+ tests/Tetris.Core.Tests/PlacementFinderTests.cs | 38 +++++++++++++++++++++++++
+ 1 file changed, 38 insertions(+)
+
+
+===== 8cc949f | 2026-10-29 12:56:39 +0800 | polywikke =====
+fix(ai): 落点枚举允许包围盒左列为负
+
+ src/Tetris.AI/PlacementFinder.cs                |  4 +++-
+ tests/Tetris.Core.Tests/HeuristicAgentTests.cs  | 14 ++++++++++----
+ tests/Tetris.Core.Tests/PlacementFinderTests.cs |  8 ++++----
+ 3 files changed, 17 insertions(+), 9 deletions(-)
+
+
+===== 488a055 | 2026-10-29 12:05:35 +0800 | polywikke =====
+merge: 引擎语义与 AI 集成测试（23 用例）
+
+
+===== c654159 | 2026-10-29 12:05:33 +0800 | polywikke =====
+test(ai): 新增 AI 打真引擎的集成用例
+
+ .../HeuristicAgentIntegrationTests.cs              | 105 +++++++++++++++++++++
+ 1 file changed, 105 insertions(+)
+
+
+===== 62a6767 | 2026-10-29 12:05:33 +0800 | polywikke =====
+test(ai): 让 SimulatedGame 可注入任意规则实现
+
+ tests/Tetris.Core.Tests/Fakes/SimulatedGame.cs | 7 ++++---
+ 1 file changed, 4 insertions(+), 3 deletions(-)
+
+
+===== 7e83a35 | 2026-10-29 12:05:33 +0800 | polywikke =====
+test(core): 覆盖引擎开局、重力、暂停与结束语义
+
+ tests/Tetris.Core.Tests/GameEngineTests.cs | 301 +++++++++++++++++++++++++++++
+ 1 file changed, 301 insertions(+)
+
+
+===== 271cd18 | 2026-10-29 12:00:10 +0800 | polywikke =====
+merge: 真规则单元测试（20 用例）
+
+
+===== 7c9e6be | 2026-10-29 12:00:10 +0800 | polywikke =====
+test(core): 覆盖旋转踢墙与锁定消行计分
+
+ tests/Tetris.Core.Tests/StandardGameRulesTests.cs | 139 +++++++++++++++++++++-
+ 1 file changed, 136 insertions(+), 3 deletions(-)
+
+
+===== 74fb73c | 2026-10-29 11:52:00 +0800 | polywikke =====
+test(core): 覆盖碰撞、下落距离与左右移动
+
+ tests/Tetris.Core.Tests/StandardGameRulesTests.cs | 113 ++++++++++++++++++++++
+ 1 file changed, 113 insertions(+)
+
+
+===== 1682ac8 | 2026-10-28 21:48:30 +0800 | polywikke =====
+merge: C 启发式 AI 与测试（评估/落点搜索/指令状态机/43 用例）
+
+
+===== d4a6cc1 | 2026-10-28 21:48:30 +0800 | polywikke =====
+merge: A 核心规则与引擎（规则三件套/踢墙/消行/引擎/7-bag）
+
+
+===== 04075e2 | 2026-10-28 13:16:41 +0800 | polywikke =====
+feat(ai): 2-ply 改为并列最优裁决并修复卡死，补齐 README 与实测数据
+
+ README.md                                          | 18 ++++-
+ ...03-C-AI\344\270\216\346\265\213\350\257\225.md" | 51 +++++++-----
+ src/Tetris.AI/HeuristicAgent.cs                    | 28 +++++--
+ src/Tetris.AI/PlacementFinder.cs                   | 94 +++++++++++++++-------
+ tests/Tetris.Core.Tests/HeuristicAgentTests.cs     | 13 +++
+ tests/Tetris.Core.Tests/PlacementFinderTests.cs    | 18 ++++-
+ 6 files changed, 164 insertions(+), 58 deletions(-)
+
+
+===== 2b3861b | 2026-10-27 23:12:45 +0800 | polywikke =====
+feat(ai): 启发式自动玩家（评估函数 + 落点搜索 + 指令状态机）
+
+ ...03-C-AI\344\270\216\346\265\213\350\257\225.md" |  43 +++++
+ src/Tetris.AI/BoardEvaluator.cs                    | 125 +++++++++++++
+ src/Tetris.AI/HeuristicAgent.cs                    | 190 ++++++++++++++++++--
+ src/Tetris.AI/PlacementFinder.cs                   | 198 +++++++++++++++++++++
+ tests/Tetris.Core.Tests/BoardEvaluatorTests.cs     | 127 +++++++++++++
+ tests/Tetris.Core.Tests/Fakes/FakeGameRules.cs     | 141 +++++++++++++++
+ tests/Tetris.Core.Tests/Fakes/SimulatedGame.cs     | 136 ++++++++++++++
+ tests/Tetris.Core.Tests/HeuristicAgentTests.cs     | 194 ++++++++++++++++++++
+ tests/Tetris.Core.Tests/PlacementFinderTests.cs    | 191 ++++++++++++++++++++
+ 9 files changed, 1332 insertions(+), 13 deletions(-)
+
+
+===== 005bd2d | 2026-10-27 16:52:10 +0800 | polywikke =====
+GameEngine_命令与硬降实现
+
+ src/Tetris.Core/Engine/GameEngine.cs | 87 +++++++++++++++++++++++++++++++++---
+ 1 file changed, 80 insertions(+), 7 deletions(-)
+
+
+===== 515cef6 | 2026-10-27 16:51:10 +0800 | polywikke =====
+GameEngine_重力与锁定实现
+
+ src/Tetris.Core/Engine/GameEngine.cs | 57 +++++++++++++++++++++++++++++++-----
+ 1 file changed, 50 insertions(+), 7 deletions(-)
+
+
+===== eb8a053 | 2026-10-27 16:50:50 +0800 | polywikke =====
+GameEngine_开局与预览队列实现
+
+ src/Tetris.Core/Engine/GameEngine.cs | 96 ++++++++++++++++++++++++++++++++++++
+ 1 file changed, 96 insertions(+)
+
+
+===== 72ad2ab | 2026-10-27 16:50:35 +0800 | polywikke =====
+SevenBag_七bag洗牌实现
+
+ src/Tetris.Core/Engine/SevenBag.cs | 64 ++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 64 insertions(+)
+
+
+===== b41e597 | 2026-10-27 12:06:08 +0800 | polywikke =====
+LockActive_锁定消行计分实现
+
+ src/Tetris.Core/Rules/StandardGameRules.cs | 88 +++++++++++++++++++++++++++---
+ 1 file changed, 80 insertions(+), 8 deletions(-)
+
+
+===== f88d48e | 2026-10-26 23:06:03 +0800 | polywikke =====
+TryRotate_SRS踢墙实现
+
+ src/Tetris.Core/Rules/StandardGameRules.cs | 67 ++++++++++++++++++++++++++----
+ 1 file changed, 60 insertions(+), 7 deletions(-)
+
+
+===== 3c72c02 | 2026-10-26 21:54:55 +0800 | polywikke =====
+Collides_DropDistance_TryMove函数实现
+
+ src/Tetris.Core/Rules/StandardGameRules.cs | 126 +++++++++++++++++++++++++++++
+ 1 file changed, 126 insertions(+)
+
+
+===== e36392f | 2026-10-25 18:51:31 +0800 | polywikke =====
+docs: 调整分工（发布归 A、存档优先、可视化归 B）并校对全部文档
+
+ ...247\210\344\270\216\351\233\206\346\210\220.md" | 18 ++---
+ ...240\270\345\277\203\345\274\225\346\223\216.md" | 30 ++++++-
+ ...235\242\344\270\216\345\255\230\346\241\243.md" | 94 +++++++++++-----------
+ ...03-C-AI\344\270\216\346\265\213\350\257\225.md" | 16 ++--
+ 4 files changed, 91 insertions(+), 67 deletions(-)
+
+
+===== 84f35df | 2026-10-25 18:25:18 +0800 | polywikke =====
+docs: 三份任务书精简为接口/实现/自测，去掉答辩与提交要求
+
+ ...240\270\345\277\203\345\274\225\346\223\216.md" | 24 +-------------------
+ ...235\242\344\270\216\345\255\230\346\241\243.md" | 24 +-------------------
+ ...03-C-AI\344\270\216\346\265\213\350\257\225.md" | 26 +---------------------
+ 3 files changed, 3 insertions(+), 71 deletions(-)
+
+
+===== 70c2fa4 | 2026-10-25 18:21:52 +0800 | polywikke =====
+docs: 去掉时间表，改为依赖顺序；AI 定为唯一扩展功能并补充可视化与 2-ply
+
+ README.md                                          |   2 +-
+ ...247\210\344\270\216\351\233\206\346\210\220.md" |  85 +++++-------
+ ...240\270\345\277\203\345\274\225\346\223\216.md" |  34 ++---
+ ...235\242\344\270\216\345\255\230\346\241\243.md" | 128 ++++++++++++-----
+ ...03-C-AI\344\270\216\346\265\213\350\257\225.md" | 154 ++++++++++++++-------
+ src/Tetris.AI/HeuristicAgent.cs                    |  11 +-
+ src/Tetris.Core/IPlayerAgentDebug.cs               |  38 +++++
+ 7 files changed, 301 insertions(+), 151 deletions(-)
+
+
+===== 730637d | 2026-10-25 17:49:15 +0800 | polywikke =====
+docs: 拆分为总览 + 三份任务书，补充接口约定与集成说明
+
+ README.md                                          |  52 +--
+ ...247\210\344\270\216\351\233\206\346\210\220.md" | 243 ++++++++++++++
+ ...240\270\345\277\203\345\274\225\346\223\216.md" | 318 +++++++++++++++++++
+ ...235\242\344\270\216\345\255\230\346\241\243.md" | 260 +++++++++++++++
+ ...03-C-AI\344\270\216\346\265\213\350\257\225.md" | 274 ++++++++++++++++
+ ...216\245\345\217\243\345\245\221\347\272\246.md" | 348 ---------------------
+ ...25\214\351\235\242\351\252\250\346\236\266.png" | Bin 27328 -> 0 bytes
+ src/Tetris.AI/HeuristicAgent.cs                    |   2 +-
+ src/Tetris.App/AppBootstrap.cs                     |  12 +-
+ src/Tetris.Core/IRandomSource.cs                   |  10 +-
+ src/Tetris.Core/PieceKind.cs                       |   2 +-
+ tests/Tetris.Core.Tests/ContractTests.cs           |  18 ++
+ 12 files changed, 1156 insertions(+), 383 deletions(-)
+
+
+===== 11c6a4e | 2026-10-25 17:34:57 +0800 | polywikke =====
+chore: 初始化五项目骨架与三人接口契约
+
+ .gitignore                                         |  24 ++
+ Directory.Build.props                              |   8 +
+ README.md                                          |  65 ++++
+ Tetris.sln                                         | 101 ++++++
+ ...216\245\345\217\243\345\245\221\347\272\246.md" | 348 +++++++++++++++++++++
+ ...25\214\351\235\242\351\252\250\346\236\266.png" | Bin 0 -> 27328 bytes
+ requirements.txt                                   | 124 ++++++++
+ src/Tetris.AI/HeuristicAgent.cs                    |  39 +++
+ src/Tetris.AI/Tetris.AI.csproj                     |  14 +
+ src/Tetris.App/AppBootstrap.cs                     |  27 ++
+ src/Tetris.App/BoardView.cs                        | 144 +++++++++
+ src/Tetris.App/KeyMap.cs                           |  22 ++
+ src/Tetris.App/MainForm.cs                         | 254 +++++++++++++++
+ src/Tetris.App/Palette.cs                          |  37 +++
+ src/Tetris.App/Program.cs                          |  13 +
+ src/Tetris.App/Tetris.App.csproj                   |  17 +
+ src/Tetris.Core/CellPos.cs                         |  12 +
+ src/Tetris.Core/GameCommand.cs                     |  32 ++
+ src/Tetris.Core/GameConfig.cs                      |  44 +++
+ src/Tetris.Core/GameState.cs                       | 134 ++++++++
+ src/Tetris.Core/GameStatus.cs                      |  17 +
+ src/Tetris.Core/IGameEngine.cs                     |  25 ++
+ src/Tetris.Core/IGameRules.cs                      |  30 ++
+ src/Tetris.Core/IHighScoreStore.cs                 |  46 +++
+ src/Tetris.Core/IPlayerAgent.cs                    |  21 ++
+ src/Tetris.Core/IRandomSource.cs                   |  38 +++
+ src/Tetris.Core/IScoreRule.cs                      |  12 +
+ src/Tetris.Core/PieceKind.cs                       |  16 +
+ src/Tetris.Core/PieceShape.cs                      |  77 +++++
+ src/Tetris.Core/PieceShapes.cs                     |  84 +++++
+ src/Tetris.Core/StandardScoreRule.cs               |  15 +
+ src/Tetris.Core/Testing/DemoEngine.cs              | 111 +++++++
+ src/Tetris.Core/Testing/DemoStates.cs              |  46 +++
+ src/Tetris.Core/Tetris.Core.csproj                 |  10 +
+ src/Tetris.Core/Tetromino.cs                       |  53 ++++
+ src/Tetris.Persistence/HighScoreDto.cs             |  19 ++
+ src/Tetris.Persistence/Tetris.Persistence.csproj   |  14 +
+ src/Tetris.Persistence/XmlHighScoreStore.cs        | 128 ++++++++
+ tests/Tetris.Core.Tests/ContractTests.cs           | 107 +++++++
+ tests/Tetris.Core.Tests/Tetris.Core.Tests.csproj   |  26 ++
+ 40 files changed, 2354 insertions(+)

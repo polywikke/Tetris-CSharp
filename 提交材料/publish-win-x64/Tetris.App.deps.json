@@ -1,0 +1,74 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0/win-x64",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {},
+    ".NETCoreApp,Version=v10.0/win-x64": {
+      "Tetris.App/1.0.0": {
+        "dependencies": {
+          "Tetris.AI": "1.0.0",
+          "Tetris.Core": "1.0.0",
+          "Tetris.Persistence": "1.0.0"
+        },
+        "runtime": {
+          "Tetris.App.dll": {}
+        }
+      },
+      "Tetris.AI/1.0.0": {
+        "dependencies": {
+          "Tetris.Core": "1.0.0"
+        },
+        "runtime": {
+          "Tetris.AI.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Tetris.Core/1.0.0": {
+        "runtime": {
+          "Tetris.Core.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Tetris.Persistence/1.0.0": {
+        "dependencies": {
+          "Tetris.Core": "1.0.0"
+        },
+        "runtime": {
+          "Tetris.Persistence.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Tetris.App/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Tetris.AI/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Tetris.Core/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Tetris.Persistence/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
